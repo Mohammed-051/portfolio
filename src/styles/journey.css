@@ -1,0 +1,22 @@
+/* Journey (lazy, loaded by rr/journey.ts). Every var() carries its final-state fallback, so an unbound or failed journey shows the finished page. */
+
+/* ---- Seams ---- */
+section[data-rr-seam]::before, section[data-rr-seam]::after { content: ""; position: absolute; pointer-events: none; }
+section[data-rr-seam^="rule"]::before {
+  top: -1px; left: var(--grid-margin); right: var(--grid-margin); height: 1px; background: var(--ink);
+  clip-path: inset(0 calc((1 - var(--rr-seam, 1)) * 100%) 0 0);
+  mask-image: linear-gradient(90deg, #000 96%, transparent);
+}
+section[data-rr-seam="rule-r"]::before { clip-path: inset(0 0 0 calc((1 - var(--rr-seam, 1)) * 100%)); mask-image: linear-gradient(270deg, #000 96%, transparent); }
+section[data-rr-seam^="rule"]::after {
+  top: -5px; left: var(--grid-margin); right: var(--grid-margin); height: 9px; opacity: var(--rr-seam, 1);
+  background: linear-gradient(var(--signal), var(--signal)) left / 1px 100% no-repeat, linear-gradient(var(--signal), var(--signal)) right / 1px 100% no-repeat;
+}
+section[data-rr-seam][data-rr-bound="stack"]::after { display: none; }
+:root[data-mode="raster"] section[data-rr-seam^="rule"]::after {
+  background: linear-gradient(var(--signal), var(--signal)) left center / 8px 8px no-repeat, linear-gradient(var(--signal), var(--signal)) right center / 8px 8px no-repeat;
+}
+
+@media print {
+  section[data-rr-seam]::before, section[data-rr-seam]::after { display: none; }
+}

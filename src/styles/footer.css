@@ -1,0 +1,272 @@
+/* Footer stage: the playground and the name share one space, back to front: back canvas, name, front canvas (DOM order).
+   The scene spans the whole stage; the height is the name plus its padding (in % of its width, so it scales with the cap
+   height), so nothing shifts when the lazy canvases arrive. */
+.ftr-stage {
+  position: relative;
+  overflow: hidden;
+  --name-inset: 12px;
+  /* The one stage scale: head room and foot here, and the drawing unit in rr/closing.ts. The name keeps the full width. */
+  --ftr-k: 0.9;
+  padding: 0 var(--name-inset); /* the name spans the frame, 12 px in from each edge, wider than the text column */
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+}
+.ftr-stage canvas { position: absolute; left: 0; bottom: 0; display: block; pointer-events: none; }
+
+/* Raster mode draws on a cell grid, so the browser must not smooth the integer upscale. */
+:root[data-mode="raster"] .ftr-stage canvas { image-rendering: pixelated; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="render"]) .ftr-stage canvas { image-rendering: pixelated; }
+}
+
+/* Head room of about one cap height for the far structures and the plotter; a sixth of a cap below the baseline for the
+   ground the name stands on. The name is one line at every width. */
+.ftr-name { position: relative; padding: calc(5.4% * var(--ftr-k)) 0 calc(1.2% * var(--ftr-k)); container-type: inline-size; color: var(--ink); user-select: none; }
+
+/* Render: Bodoni Moda capitals fitted edge to edge. Measured from rendered pixels: cap ink is 0.76em at every opsz, so
+   opsz alone cannot raise the height; the advance per em sets it. opsz 24, weight 500, -0.05em tracking and a 0.28em
+   word gap give 9.834em for "MOHAMMED PARVEZ." (err high: overflow clips). */
+.ftr-name__t {
+  --em: 9.86;
+  display: flex;
+  gap: 0.28em;
+  font-family: var(--font-name);
+  font-weight: var(--name-weight, 500);
+  font-variation-settings: "opsz" 24;
+  font-size: calc(100cqw / var(--em));
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  transform-origin: 50% 100%;}
+.ftr-name__l { display: flex; align-items: flex-end; }
+/* Each word's box is trimmed to cap height and baseline, so the scene can stand on the baseline. */
+.ftr-name__w, .ftr-name__s { display: block; line-height: 1; text-box: trim-both cap alphabetic; }
+.ftr-name__s { color: var(--signal); }
+/* No text-box: a 1em line box holds the cap from 11.5% to 86.5% (Bodoni Moda: ascent 1.13, descent 0.4, cap 0.75). */
+@supports not (text-box: trim-both cap alphabetic) {
+  .ftr-name__w, .ftr-name__s { margin: -0.115em 0 -0.135em; }
+}
+
+/* Raster: the hand-built cell face (pixelName.ts). */
+.ftr-name__pw { display: none; position: relative; width: 98%; margin: 0 auto; }.ftr-name__px { display: block; width: 100%; height: auto; overflow: visible; }
+:root[data-mode="raster"] .ftr-name__t { display: none; }
+:root[data-mode="raster"] .ftr-name__pw { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="render"]) .ftr-name__t { display: none; }
+  :root:not([data-mode="render"]) .ftr-name__pw { display: block; }
+}
+
+/* The red period is the Back to top link (#top goes through the router in rr/scroll.ts). The link sits exactly on the
+   period; its hit area reaches 10 px past it so a thumb can find it. The hover is one lift, no glow, no gradient. */
+.ftr-name__s { position: relative; }
+.ftr-dot { position: absolute; display: block; cursor: pointer; pointer-events: auto; text-decoration: none; }
+/* The Bodoni period's ink box, measured with canvas measureText: 0.037em in, 0.148em square, 0.015em under the baseline. */
+.ftr-name__s .ftr-dot { left: 0.037em; bottom: -0.015em; width: 0.148em; height: 0.148em; }
+.ftr-dot::before { content: ""; position: absolute; inset: -10px; }
+.ftr-dot:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.ftr-name__s > span, .ftr-dot__r { transition: translate 160ms ease-out; }
+@media (hover: hover) {
+  .ftr-name__s:has(.ftr-dot:hover) > span { translate: 0 -0.05em; }
+  .ftr-name__pw:has(.ftr-dot:hover) .ftr-dot__r { translate: 0 -7px; }
+}
+
+/* Phones: still one line, no automatic wrap. The cap is about 7.6% of the width, so the stage takes
+   more head room for the scene above it. */
+@media (max-width: 899px) {
+  .ftr-name { padding: calc(26% * var(--ftr-k)) 0 calc(4% * var(--ftr-k)); }
+}
+
+/* Colophon: one quiet line under the stage. No fixed control sits at the bottom, so no clearance. */
+.ftr-fine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 24px;
+  padding: 16px var(--grid-margin) calc(env(safe-area-inset-bottom, 0px) + 16px);
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+}
+.ftr-top { margin-left: auto; color: var(--ink); text-decoration-color: var(--mute); }
+.ftr-top:hover { text-decoration-color: var(--signal); }
+
+/* ---- Contact: Ask, Dock, Answer ----
+   One frame holds the stage and the contact layer. Phones and short screens stack them (no pin). From 900 px (and 620 px of
+   height) the frame sticks under the nav for the section's extra height, and rr/dock.ts writes --dock (0 = Ask, 1 = docked).
+   Reduced motion: [data-still] lays the docked frame out once, with no pin. */
+.ct { --dock: 0; --fade: clamp(0, calc(1 - var(--dock) * 3), 1); --cell: 4px; --mail: clamp(1.75rem, 3.9vw, 3.75rem); --mw: 14.5; --dock-top: 64px; --row: 28px; }
+:root[data-mode="raster"] .ct { --mail: clamp(1.5rem, 3.1vw, 2.9rem); --mw: 18.2; }
+.ct__frame { position: relative; display: flex; flex-direction: column; }
+.ct .ftr-stage { order: 9; } /* phones: headline, email, links, then the stage */
+.ct__head { padding: 0 var(--grid-margin); }
+.ct__ask { display: flex; flex-direction: column; align-items: stretch; gap: 24px; padding: 28px var(--grid-margin) 40px; }
+.ct__status { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+.ct__status > p { display: contents; } /* the clock's dot, time and offset join this row, so the dot leads the city */
+.ct__status .live-dot { order: 0; }
+.ct__city { order: 1; }
+.ct__status time { order: 2; }
+.ct__status > p > span:last-child { order: 3; }
+.ct__open { margin: 0; color: var(--ink); text-wrap: balance; }
+.ct__a, .ct__b { display: block; }
+.ct__b { color: var(--mute); }
+
+/* Phones: the email is a full-width pill with Copy inside it. */
+.ct__mail { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 12px 12px 16px; border: 1px solid var(--rule); }
+.ct__addr {
+  flex: 1 1 100%; min-width: 0; color: var(--ink); white-space: nowrap; text-decoration: none;
+  font-size: clamp(0.9375rem, 4.7vw, 1.5rem); line-height: 1.15; padding-bottom: 4px; align-self: flex-start; width: fit-content; flex-basis: auto;
+  background:
+    linear-gradient(var(--signal), var(--signal)) 0 100% / 0 calc(2px / var(--s, 1)) no-repeat,
+    linear-gradient(var(--ink-2), var(--ink-2)) 0 100% / 100% calc(1px / var(--s, 1)) no-repeat;
+  transition: background-size 280ms ease-out;
+}
+.ct__addr:hover, .ct__addr:focus-visible { background-size: 100% calc(2px / var(--s, 1)), 100% calc(1px / var(--s, 1)); }
+.ct__addr:focus-visible { outline-width: calc(2px / var(--s, 1)); outline-offset: calc(4px / var(--s, 1)); }
+:root[data-mode="raster"] .ct__addr { transition: background-size 240ms steps(4, end); }
+@media (max-width: 899px) { :root[data-mode="raster"] .ct__addr { font-size: clamp(0.75rem, 3.55vw, 1.1875rem); } } /* Doto runs wider */
+/* Render caps run 24.2em wide for the address and the column is 100vw - 94px; 4.7vw overflowed it by 115px at 390 and widened the page. */
+@media (max-width: 899px) { :root[data-mode="render"] .ct__addr { font-size: clamp(0.5625rem, calc((100vw - 98px) / 24.2), 1.5rem); } }
+.ct__copy {
+  flex: 1 1 100%; min-height: 44px; min-width: 76px; padding: 0 14px; color: var(--ink); background: transparent; border: 1px solid var(--ink-2); cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+@media (hover: hover) { .ct__copy:hover { background: var(--ink); color: var(--paper); } }
+
+.ct__links { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+.ct__links li { display: flex; align-items: center; min-height: 44px; border-top: 1px solid var(--rule); }
+.ct__link {
+  display: inline-flex; align-items: center; min-height: 44px; color: var(--ink);
+  text-decoration: underline; text-decoration-color: var(--mute); text-decoration-thickness: 1px; text-underline-offset: 0.35em;
+}
+.ct__link:hover { text-decoration-color: var(--signal); }
+.ct__to { display: none; }
+
+@media (min-width: 640px) and (max-width: 899px), (min-width: 900px) and (max-height: 619px) {
+  .ct__ask > * { max-width: 40rem; }
+}
+
+@media (min-width: 900px) and (min-height: 620px) {
+  .ct { height: calc(170vh - var(--nav-h)); }
+  .ct[data-still] { height: calc(100vh - var(--nav-h)); --dock: 1; }
+  .ct__frame { position: sticky; top: var(--nav-h); height: calc(100vh - var(--nav-h)); overflow: clip; container-type: inline-size; }
+  /* The docked band sits 48px above the scene: its top = frame height - scene height - the 4-row link stack - gap. The scene's
+     rise above the frame bottom is a multiple of the name width (measured: Render 0.169 incl. the rail, Raster 0.157), never above SectionHead. */
+  .ct { --sc: 0.169; --dock-top: max(64px, calc(100% - (100cqi - 2 * var(--grid-margin)) * var(--sc) - 4 * var(--row) - 48px)); }
+  .ct { --da: 1.125rem; } /* docked address size; smaller on narrow desktops so address + Copy stay left of the centred clock */
+  @media (max-width: 1199px) { .ct { --da: 0.8125rem; } }
+  :root[data-mode="raster"] .ct { --sc: 0.157; }
+  @media (prefers-color-scheme: dark) { :root:not([data-mode="render"]) .ct { --sc: 0.157; } }
+  .ct .ftr-stage { position: absolute; inset: 0; display: flex; align-items: flex-end; border-top: 0; }
+  .ct .ftr-name { width: 100%; }
+  .ct__head { position: relative; z-index: 2; padding-top: 8px; }
+  .ct__ask { position: absolute; inset: 0; z-index: 2; display: block; padding: clamp(56px, 11vh, 120px) var(--grid-margin) 0; pointer-events: none; }
+  .ct__ask :is(a, button, .pending) { pointer-events: auto; }
+  .ct__status { width: fit-content; margin-bottom: 28px; }
+  .ct__open { margin-bottom: 36px; opacity: var(--fade); transform: translateY(calc((1 - var(--fade)) * -24px)); }
+  .ct__mail { display: flex; flex-wrap: nowrap; gap: 14px; min-height: 0; padding: 0; border: 0; }
+  .ct__addr { flex: none; width: auto; align-self: auto; font-size: var(--mail); white-space: nowrap; }
+  .ct__copy { flex: none; min-height: 30px; min-width: 0; padding: 0 12px; }
+  .ct__links { position: relative; display: flex; gap: 28px; width: calc(var(--mail) * var(--mw)); margin-top: 28px; padding-top: 14px; }
+  .ct__links::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; background: var(--rule); opacity: var(--fade); }
+  .ct__links li { display: block; min-height: 0; border: 0; }
+  .ct__link { min-height: 0; }
+
+  /* Dock targets, measured by rr/dock.ts. The address one carries the text so its width is the docked width. */
+  .ct__to { display: block; position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
+  .ct__to i { position: absolute; display: block; }
+  .ct__to [data-to="addr"] {
+    left: var(--grid-margin); top: var(--dock-top); font: 400 var(--da)/1.3 var(--font-display); font-weight: var(--display-weight);
+    letter-spacing: var(--display-track); text-transform: var(--display-case, none); white-space: nowrap;
+  }
+  .ct__to [data-to="addr"]::before { content: attr(data-t); }
+  .ct__to [data-to="status"] { left: 0; top: var(--dock-top); height: 1.5rem; }
+  .ct__to [data-to^="l"] { right: var(--grid-margin); width: 0; height: var(--row); }
+  .ct__to [data-to="l0"] { top: var(--dock-top); }
+  .ct__to [data-to="l1"] { top: calc(var(--dock-top) + var(--row)); }
+  .ct__to [data-to="l2"] { top: calc(var(--dock-top) + var(--row) * 2); }
+
+  /* The dock: each piece keeps its Ask box and is moved (and, for the address, scaled) to its corner. */
+  .ct [data-dock] {
+    transform-origin: 0 0; --s: calc(1 + (var(--k, 1) - 1) * var(--dock));
+    transform: translate(calc(var(--x, 0px) * var(--dock)), calc(var(--y, 0px) * var(--dock))) scale(var(--s)); will-change: transform;
+  }
+  /* Raster: whole-cell offsets, so the pieces land on the footer's cell grid. */
+  @supports (width: round(1px, 1px)) {
+    :root[data-mode="raster"] .ct [data-dock] {
+      transform: translate(round(calc(var(--x, 0px) * var(--dock)), var(--cell)), round(calc(var(--y, 0px) * var(--dock)), var(--cell))) scale(var(--s));
+    }
+  }
+
+  /* Links: the vertical spread leads (done at a quarter) so the row fans into a stack one row low, under the address and Copy;
+     the stack rises that last row once x has cleared them (dock 0.6-1). */
+  .ct [data-dock^="l"] {
+    transform: translate(calc(var(--x, 0px) * var(--dock)), calc((var(--y, 0px) + var(--row)) * min(1, 4 * var(--dock)) - var(--row) * clamp(0, (var(--dock) - 0.6) / 0.4, 1))) scale(var(--s));
+  }
+  @supports (width: round(1px, 1px)) {
+    :root[data-mode="raster"] .ct [data-dock^="l"] {
+      transform: translate(round(calc(var(--x, 0px) * var(--dock)), var(--cell)), round(calc((var(--y, 0px) + var(--row)) * min(1, 4 * var(--dock)) - var(--row) * clamp(0, (var(--dock) - 0.6) / 0.4, 1)), var(--cell))) scale(var(--s));
+    }
+  }
+
+  /* Reduced motion and the plain route: the docked layout, laid out directly. */
+  .ct[data-still] [data-dock] { transform: none; will-change: auto; }
+  .ct[data-still] .ct__ask { padding: 0; }
+  .ct[data-still] .ct__open, .ct[data-still] .ct__links::before { display: none; }
+  .ct[data-still] .ct__status { position: absolute; inset: var(--dock-top) 0 auto; justify-content: center; margin: 0 auto; }
+  .ct[data-still] .ct__mail { position: absolute; left: var(--grid-margin); top: var(--dock-top); align-items: center; }
+  .ct[data-still] .ct__addr { font-size: var(--da); }
+  .ct[data-still] .ct__links { position: absolute; right: var(--grid-margin); top: var(--dock-top); display: grid; grid-template-columns: auto; width: auto; margin: 0; padding: 0; justify-items: end; row-gap: calc(var(--row) - 1.25em); }
+}
+
+/* ---- The world ending ----
+   With the paper world on, Contact is the sign card on the table: its four printed tiles carry the channels and the real
+   controls (.ct__tile) are laid over them by src/world/index.ts. The address and the open line rest on the table under the
+   card; then the footer sheet slides up over a still table (the canvas clip ends at the sheet's top, src/world/core.ts).
+   Without the world none of this applies: .ct__world never shows and .ct__sheet is transparent to layout. */
+.ct__world { display: none; }
+.ct__sheet { display: contents; }
+:root.has-world #contact { border-top: 0; padding-top: 0; }
+/* No seam rule (hairline with a red dot at each end, journey.css) between Lab and Contact: the table is the seam. */
+:root:is(.has-world, .world-wait) #contact::before, :root:is(.has-world, .world-wait) #contact::after { display: none; }
+:root.has-world .ct { height: auto; }
+:root.has-world .ct__frame { position: relative; top: auto; height: auto; overflow: visible; container-type: normal; }
+:root.has-world :is(.ct__head, .ct__ask, .ct__to) { display: none; }
+:root.has-world .ct .ftr-stage { position: relative; inset: auto; display: block; border-top: 1px solid var(--rule); }
+:root.has-world .ct__sheet { display: block; position: relative; z-index: 3; order: 9; }
+/* The sheet's leading edge lifts off the table: a short shade on the table just above it. */
+:root.has-world .ct__sheet::before {
+  content: ""; position: absolute; inset: -24px 0 auto; height: 24px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.35));
+}
+:root.has-world .ct__world {
+  position: sticky; top: var(--nav-h); z-index: 2; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;
+  height: calc(100svh - var(--nav-h)); padding: 0 var(--grid-margin) 40px; color: #ebe7dd; pointer-events: none;
+}
+.ct__avail { margin: 0; color: #b8b3a7; }
+.ct__mailw { margin: 0; font-size: clamp(1.0625rem, 4.4vw, 2.75rem); line-height: 1.1; text-transform: none; overflow-wrap: anywhere; user-select: all; pointer-events: auto; }
+/* A copy line that would ride onto the card at the page end steps out (src/world/index.ts sets data-off); visibility follows
+   the fade so a hidden address takes no focus. */
+.ct__world > :is(.ct__avail, .ct__mailw) { transition: opacity 160ms ease-out, visibility 0s; }
+.ct__world > [data-off] { opacity: 0; visibility: hidden; transition: opacity 160ms ease-out, visibility 0s linear 160ms; }
+.ct__mailw a { color: inherit; text-decoration: underline; text-decoration-color: var(--signal); text-underline-offset: 0.2em; }
+
+/* The overlay: viewport-fixed (main's @container does not capture fixed children), a box per tile, placed by transform. */
+.ct__tiles { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+.ct__tile {
+  position: absolute; left: 0; top: 0; display: block; padding: 0; margin: 0; border: 0; border-radius: 0.5rem;
+  background: transparent; color: transparent; cursor: pointer; pointer-events: none; transform-origin: 0 0;
+}
+:root.has-world.world-band .ct__tile[data-live] { pointer-events: auto; } /* set per tile: live and not under the footer sheet */
+/* A live tile answers. Hover takes the rim to full ink and lifts 2 px, pressed sits 1 px down. `translate` composes
+   outside the homography transform, so the shift is in screen pixels and the overlay keeps its fit at rest. */
+.ct__tile { transition: translate 160ms ease-out, box-shadow 160ms ease-out; }
+@media (hover: hover) { .ct__tile[data-live]:hover { translate: 0 -2px; box-shadow: inset 0 0 0 1px var(--ink); } }
+.ct__tile[data-live]:active { translate: 0 1px; transition-duration: 80ms; }
+.ct__tile:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; } /* html.calm (motion.css) zeroes the lift */
+.ct__tl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (forced-colors: active) {
+  .ct__tiles { position: static; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: auto; }
+  .ct__tile { position: static; width: auto !important; height: auto !important; transform: none !important; min-height: 48px; padding: 12px 16px; outline: 2px solid CanvasText; background: Canvas; color: CanvasText; pointer-events: auto; }
+  .ct__tl { position: static; width: auto; height: auto; clip-path: none; }
+}
+/* At sign rest the sheet top sits nav-h above the viewport bottom with its 24 px shade above it: 96 px keeps the address
+   and the open line clear of both. */
+:root.has-world .ct__world { padding-bottom: 96px; }

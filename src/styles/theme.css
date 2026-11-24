@@ -1,0 +1,158 @@
+/* Design tokens. Tailwind v4 reads @theme and turns each namespace into utilities.
+   `static` keeps every variable in the output, so plain CSS and JS can read them too. */
+
+@theme static {
+  /* Colour. Contrast is measured on ink-950. Only the tokens below exist. */
+  --color-*: initial;
+  --color-ink-950: #080807; /* page */
+  --color-ink-900: #11110f; /* raised surface */
+  --color-ink-800: #1c1b18; /* section hairlines */
+  --color-ink-700: #2c2a26; /* image frames, strong hairlines */
+  --color-bone-100: #ebe7dd; /* text, 16.2:1 */
+  --color-bone-300: #b8b3a7; /* secondary text, 9.6:1 */
+  --color-bone-500: #8c877c; /* muted text, 5.6:1 */
+  /* Sampled from the keyboard render's display strip (avg #af5851, hue 5deg), raised for UI. 6.1:1.
+     Under 2% of pixels: the thread, nodes, focus ring, hover and active, the live clock dot. */
+  --color-ember: #ff4f3a;
+
+  /* Type: two families per mode. Display: Render Newsreader, Raster Doto. Read: Render Instrument Sans, Raster JetBrains Mono.
+     Per-role weight, tracking and line height are on :root below and switch with the mode. */
+  --font-*: initial;
+  --font-display: "Newsreader Display", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-read: "Instrument Sans Variable", "Segoe UI", system-ui, sans-serif;
+  --default-font-family: var(--font-read);
+
+  /* Fluid scale. The wordmark is not here: it is fitted to the measure in app.css. */
+  --text-*: initial;
+  --text-label: clamp(0.6875rem, 0.65rem + 0.12vw, 0.8125rem);
+  --text-label--line-height: 1.45;
+  --text-ui: 0.8125rem;
+  --text-meta: clamp(0.75rem, 0.72rem + 0.1vw, 0.8125rem);
+  --text-button: 0.75rem;
+  --text-body: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --text-body--line-height: var(--body-lh);
+  --text-lead: clamp(1.125rem, 1rem + 0.6vw, 1.5rem);
+  --text-lead--line-height: 1.35;
+  --text-heading: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+  --text-heading--line-height: var(--heading-lh);
+  --text-display-m: clamp(2.25rem, 1.4rem + 3.2vw, 4.5rem);
+  --text-display-m--line-height: var(--display-lh);
+  --text-display-l: clamp(3.5rem, 2rem + 6vw, 6rem);
+  --text-display-l--line-height: var(--display-lh);
+
+  /* 4px base: p-1 = 4px, p-4 = 16px. */
+  --spacing: 4px;
+
+  /* Breakpoints. Designed and tested at 375, 768, 1024, 1440. */
+  --breakpoint-*: initial;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+  --breakpoint-2xl: 1920px;
+
+  /* Easing. out-expo is the default; in-out is the thread's draw. */
+  --ease-*: initial;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --radius-*: initial;
+  --radius-hair: 2px; /* the ceiling; everything else is square */
+}
+
+/* Modes. Render = paper, the default. Raster = screen, from the system or data-mode.
+   --focus is per mode, at least 3:1 on paper and panel: Render #B62E19 is 5.01:1 on paper, 4.57:1 on panel;
+   Raster #FF4F3A is 6.14:1 on paper, 5.74:1 on panel. */
+:root {
+  --paper: #EBE7DD; --panel: #E2DDD1; --ink: #11110F; --ink-2: #3D3A34; --mute: #5F5A51;
+  --rule: #CFC9BB; --signal: #B62E19; --trace: #D9AC9F; --focus: #B62E19;
+  /* Hero name face per mode: Render Didone, Raster pixel. */
+  --font-name: "Bodoni Moda Variable", "Bodoni 72", Didot, "Playfair Display", Georgia, serif; --name-weight: 500; --name-track: -0.02em;
+  /* Type roles, Render. Both Raster blocks below override every line. */
+  --display-weight: 400; --display-strong: 600; --display-track: -0.025em; --display-lh: 0.92;
+  --heading-weight: 400; --heading-track: -0.015em; --heading-lh: 1.04;
+  --body-weight: 400; --body-lh: 1.6; --body-track: 0em;
+  --ui-weight: 500; --ui-track: 0.005em;
+  --label-weight: 500; --label-track: 0.12em;
+  --meta-weight: 400; --meta-track: 0.02em;
+  --button-weight: 600; --button-track: 0.1em;
+  --step: 1px; /* motion and layout quantum: Render 1px, both Raster blocks 8px */
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="render"]) { --paper: #080807; --panel: #121210; --ink: #EBE7DD; --ink-2: #B8B3A7; --mute: #8C877C; --rule: #2C2A26; --signal: #FF4F3A; --trace: #5E281E; --focus: #FF4F3A; --font-name: "Jersey 25", "Pixelify Sans Variable", "JetBrains Mono Variable", ui-monospace, monospace; --name-weight: 400; --name-track: 0em;
+    --font-display: "Doto Variable", "JetBrains Mono Variable", ui-monospace, monospace;
+    --font-read: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
+    --display-weight: 800; --display-strong: 900; --display-track: 0em; --display-lh: 0.9;
+    --display-case: uppercase; /* Doto lowercase reads badly (g as q, gaps after narrow letters); monospace, so widths hold */
+    --heading-weight: 800; --heading-track: 0em; --heading-lh: 1.05;
+    --body-weight: 400; --body-lh: 1.72; --body-track: -0.005em;
+    --ui-weight: 500; --ui-track: 0em;
+    --label-weight: 500; --label-track: 0.08em;
+    --meta-weight: 400; --meta-track: 0em;
+    --button-weight: 600; --button-track: 0.06em;
+    --text-body: clamp(1rem, 0.98rem + 0.1vw, 1.0625rem);
+    --text-display-l: clamp(2.5rem, 1.5rem + 4.4vw, 5rem); /* Doto is monospace, 0.6em per char: "Rasterization" must fit its column */
+    --text-display-m: clamp(1.75rem, 1.1rem + 2.4vw, 3.5rem); /* and "SMART-LIFE" one line of the Work stage text column */
+    --step: 8px;
+    color-scheme: dark; }
+}
+:root[data-mode="raster"] { --paper: #080807; --panel: #121210; --ink: #EBE7DD; --ink-2: #B8B3A7; --mute: #8C877C; --rule: #2C2A26; --signal: #FF4F3A; --trace: #5E281E; --focus: #FF4F3A; --font-name: "Jersey 25", "Pixelify Sans Variable", "JetBrains Mono Variable", ui-monospace, monospace; --name-weight: 400; --name-track: 0em;
+  --font-display: "Doto Variable", "JetBrains Mono Variable", ui-monospace, monospace;
+  --font-read: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
+  --display-weight: 800; --display-strong: 900; --display-track: 0em; --display-lh: 0.9;
+  --display-case: uppercase;
+  --heading-weight: 800; --heading-track: 0em; --heading-lh: 1.05;
+  --body-weight: 400; --body-lh: 1.72; --body-track: -0.005em;
+  --ui-weight: 500; --ui-track: 0em;
+  --label-weight: 500; --label-track: 0.08em;
+  --meta-weight: 400; --meta-track: 0em;
+  --button-weight: 600; --button-track: 0.06em;
+  --text-body: clamp(1rem, 0.98rem + 0.1vw, 1.0625rem);
+  --text-display-l: clamp(2.5rem, 1.5rem + 4.4vw, 5rem); /* Doto is monospace, 0.6em per char: "Rasterization" must fit its column */
+  --text-display-m: clamp(1.75rem, 1.1rem + 2.4vw, 3.5rem); /* and "SMART-LIFE" one line of the Work stage text column */
+  --step: 8px;
+  color-scheme: dark; }
+
+/* The Tailwind colour tokens follow the mode, so every section switches without component edits.
+   Unlayered, so it wins over the @theme values in the theme layer. */
+:root {
+  --color-ink-950: var(--paper);
+  --color-ink-900: var(--panel);
+  --color-ink-800: var(--rule);
+  --color-ink-700: var(--rule);
+  --color-bone-100: var(--ink);
+  --color-bone-300: var(--ink-2);
+  --color-bone-500: var(--mute);
+  --color-ember: var(--signal);
+}
+
+:root {
+  /* Work and Lab tile frame. */
+  --tile-ratio: 16 / 10;
+
+  /* Motion durations: the one scale. Mirrored in src/motion/config.ts; a dev check warns on drift.
+     tokens.css --motion-duration-* alias these. wipe and hero are legacy names only: add no new use. Raster: steps(duration / 40ms). */
+  --duration-press: 70ms;
+  --ease-press: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-instant: 120ms;
+  --duration-fast: 240ms;
+  --duration-wipe: 180ms;
+  --duration-base: 480ms;
+  --duration-slow: 900ms;
+  --duration-hero: 1400ms;
+
+  /* Layout grid: 4 cols mobile, 6 tablet, 12 desktop. */
+  --grid-cols: 4;
+  --grid-margin: 16px;
+  --grid-gutter: 12px;
+  --nav-h: 56px;
+}
+
+@media (min-width: 768px) {
+  :root { --grid-cols: 6; --grid-margin: 24px; --grid-gutter: 16px; --nav-h: 64px; }
+}
+
+@media (min-width: 1024px) {
+  :root { --grid-cols: 12; --grid-margin: 40px; --grid-gutter: 24px; }
+}

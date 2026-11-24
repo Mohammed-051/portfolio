@@ -1,0 +1,45 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+
+# Environment and deploy
+.env*
+!.env.example
+.vercel/
+
+# Logs
+logs/
+*.log
+
+# Lighthouse CI reports
+.lighthouseci/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.tmp
+
+# Local assistant and tool config
+.claude/
+.cursor/
+.windsurf/
+CLAUDE.md
+AGENTS.md
+.impeccable/
+.playwright-mcp/
+
+# Local archives and working notes
+*.zip
+/archive/
+/research/
+/docs/

@@ -1,0 +1,8 @@
+@font-face{font-family:"Bodoni Moda Variable";font-style:normal;font-display:swap;font-weight:400 900;src:url(./fonts/bodoni-moda-latin-opsz-normal.woff2) format("woff2")}
+@font-face{font-family:"Jersey 25";font-style:normal;font-display:swap;font-weight:400;src:url(./fonts/jersey-25-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"JetBrains Mono Variable";font-style:normal;font-display:swap;font-weight:100 800;src:url(./fonts/jetbrains-mono-latin-wght-normal.woff2) format("woff2")}
+@font-face{font-family:"Newsreader Display";font-style:normal;font-display:swap;font-weight:300 700;src:url(./fonts/newsreader-latin-display-wght.woff2) format("woff2")}
+@font-face{font-family:"Instrument Sans Variable";font-style:normal;font-display:swap;font-weight:400 700;src:url(./fonts/instrument-sans-latin-wght-normal.woff2) format("woff2")}
+@font-face{font-family:"Doto Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(./fonts/doto-latin-wght-normal.woff2) format("woff2")}
+/* Handwriting: About margin notes and 3D paper annotations only; nothing names it until rr/write.ts or world/about.ts asks. */
+@font-face{font-family:"Caveat";font-style:normal;font-display:swap;font-weight:500;src:url(./fonts/caveat-latin-500-basic.woff2) format("woff2")}

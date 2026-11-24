@@ -1,0 +1,103 @@
+/* Navbar. One fixed object driven by scroll: Layout.tsx writes --nv (0 at the
+   top, 1 compact) from scrollY on each scrolled frame and --nv-d (the slide that docks PARVEZ after "M."). Everything here moves
+   by transform or opacity, so compaction never changes layout. Unlayered: it beats the old .nav rules in app.css. */
+
+/* The scrolling root keeps native scrolling (wheel, keys, programmatic, Lenis); only the bar is gone. The nav label orients. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+
+.nv {
+  --nv: 0; --nv-d: 0; --nv-F: 26; /* name size at the top, px; compact text is 16 px */
+  --nv-k: calc(16 / var(--nv-F)); --nv-dy: calc(var(--nv-F) * 0.5px - 8px);
+  position: fixed; inset: 0 0 auto 0; z-index: 40; display: flex; justify-content: flex-end; align-items: center; gap: 24px;
+  height: 44px; padding-inline: var(--g); color: var(--color-bone-100); background: none; box-shadow: none; translate: none; transition: none;
+}
+@media (min-width: 768px) { .nv { --nv-F: 34; } }
+@media (min-width: 1280px) { .nv { --nv-F: 44; } }
+:root[data-mode="raster"] .nv { --nv-k: calc(18 / var(--nv-F)); }
+
+/* Legibility, no bar: Render a paper fade with blur(24px) under a mask; Raster a solid cell band ending in a 4x4 ordered
+   dither (75, 50, 25% of 2 px cells), no blur. Both appear with the compaction. */
+.nv::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 72px; z-index: -1; pointer-events: none; opacity: var(--nv);
+  background: color-mix(in srgb, var(--paper) 62%, transparent);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  mask: linear-gradient(#000 55%, rgb(0 0 0 / 0.8) 68%, transparent);
+}
+:root[data-mode="raster"] .nv::before {
+  height: 56px; backdrop-filter: none; -webkit-backdrop-filter: none; mask: none;
+  background:
+    linear-gradient(var(--paper) 0 0) 0 0 / 100% 44px no-repeat,
+    conic-gradient(var(--paper) 75%, #0000 0) 0 44px / 4px 4px repeat-x,
+    conic-gradient(var(--paper) 25%, #0000 0 50%, var(--paper) 0 75%, #0000 0) 0 48px / 4px 4px repeat-x,
+    conic-gradient(var(--paper) 25%, #0000 0) 0 52px / 4px 4px repeat-x;
+}
+:root.world-band .nv::before { opacity: 0; } /* over the dark table work.css paints the header itself */
+
+/* The name: MOHAMMED PARVEZ at the top, M. PARVEZ plus the live section once compact. */
+.nv__name {
+  position: absolute; left: var(--g); top: 22px; display: flex; align-items: baseline;
+  font-family: var(--font-name); font-weight: var(--name-weight); letter-spacing: var(--name-track);
+  font-size: calc(var(--nv-F) * 1px); line-height: 1; text-transform: uppercase; white-space: nowrap;
+  color: var(--color-bone-100); text-decoration: none; transform-origin: 0 50%;
+  transform: translateY(calc(-50% + (1 - var(--nv)) * var(--nv-dy))) scale(calc(1 + (var(--nv-k) - 1) * var(--nv)));
+  transition: opacity var(--duration-fast) var(--ease-out-expo), visibility var(--duration-fast);
+}
+.nv__m { position: relative; }
+.nv__dot { position: absolute; left: 100%; opacity: clamp(0, (var(--nv) - 0.45) / 0.3, 1); }
+.nv__o { opacity: clamp(0, (0.45 - var(--nv)) / 0.2, 1); }
+/* The word space as a margin: flex drops the whitespace text node between the spans. */
+.nv__p { position: relative; margin-left: 0.26em; translate: calc(clamp(0, (var(--nv) - 0.3) * 2, 1) * var(--nv-d) * -1px) 0; }
+.nv__sec { position: absolute; left: 100%; bottom: 0.08em; padding-left: 0.45em; opacity: clamp(0, (var(--nv) - 0.8) / 0.2, 1); font: 500 0.72em/1 var(--font-read); letter-spacing: 0.04em; }
+.nv__sec > span { display: inline-block; animation: nv-in var(--duration-fast) var(--ease-out-expo) both; }
+:root[data-mode="raster"] .nv__sec > span { animation: nv-type var(--duration-fast) steps(6) both; }
+@keyframes nv-in { from { opacity: 0; filter: blur(6px); translate: 0 40%; } }
+@keyframes nv-type { from { clip-path: inset(0 100% 0 0); } }
+/* The footer wordmark is the bookend: the name steps aside there. */
+.nv[data-end] .nv__name { opacity: 0; visibility: hidden; }
+/* Reduced motion: no scrub; the state flips at 0.2 vh with one 150 ms fade, and the label swaps at once. */
+html.calm .nv[data-c="0"] .nv__name { animation: nv-x0 150ms linear !important; }
+html.calm .nv[data-c="1"] .nv__name { animation: nv-x1 150ms linear !important; }
+@keyframes nv-x0 { from { opacity: 0; } }
+@keyframes nv-x1 { from { opacity: 0; } }
+
+/* Keys: text only, no border, box or bar. Render: sans, a 1 px underline grows in 240 ms. Raster: mono caps, inverse video at once. */
+.nv__ctl, .nv__list { display: flex; align-items: center; gap: clamp(14px, 1.6vw, 24px); }
+.nv .nv__k {
+  position: relative; display: inline-flex; align-items: center; gap: 0.3em; height: auto; min-height: 32px; padding: 0; border: 0; background: none;
+  font: 500 0.8125rem/1 var(--font-read); letter-spacing: 0.01em; text-transform: none; color: var(--color-bone-300); text-decoration: none; white-space: nowrap;
+  transition: color var(--duration-instant) var(--ease-out-expo), translate var(--duration-press) var(--ease-press);
+}
+.nv .nv__k::before {
+  content: ""; position: absolute; left: 0; right: 0; top: calc(50% + 0.85em); height: 1px; background: currentColor;
+  transform: scaleX(0); transform-origin: left; transition: transform var(--duration-fast) var(--ease-out-expo); pointer-events: none;
+}
+.nv .nv__k[aria-current="true"] { color: var(--color-bone-100); }
+.nv .nv__k[aria-current="true"]::before { transform: none; background: var(--nv-sig, var(--signal)); }
+.nv { --nv-sig: #FF4F3A; } /* the bar is dark: the brighter red keeps 3:1 there in Render too */
+.nv .nv__k:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; color: var(--color-bone-100); }
+.nv .nv__k:active { translate: 0 1px; }
+.nv__v { color: var(--color-bone-500); }
+.nv .mode .mode__opt { display: inline; transition: none; } /* both names at every width (app.css hid one under 768) */
+@media (hover: hover) {
+  .nv .nv__k:hover { color: var(--color-bone-100); }
+  .nv .nv__k:hover::before { transform: none; }
+}
+:root[data-mode="raster"] .nv .nv__k { padding-inline: 4px; font: 500 0.75rem/1 var(--font-read); letter-spacing: 0.06em; text-transform: uppercase; transition: translate var(--duration-press) steps(2); }
+:root[data-mode="raster"] .nv .nv__k::before { content: none; }
+:root[data-mode="raster"] .nv .nv__k[aria-current="true"] { background: var(--color-bone-100); color: var(--color-ink-950); box-shadow: inset 0 0 0 1px var(--color-ink-950), inset 0 -3px 0 var(--signal); }
+:root[data-mode="raster"] .nv .nv__k:focus-visible { outline-style: dotted; outline-offset: 2px; }
+@media (hover: hover) {
+  :root[data-mode="raster"] .nv .nv__k:hover, :root[data-mode="raster"] .nv .nv__k:hover :is(.nv__v, .mode__opt) { background: var(--color-bone-100); color: var(--color-ink-950); }
+}
+
+/* Under 1024 px the links and keys live in the menu; the bar keeps the name and Menu. */
+.nv .nv__menu { display: none; }
+@media (max-width: 1023px) {
+  .nv > nav, .nv > .nv__ctl { display: none; }
+  .nv .nv__menu { display: inline-flex; min-height: 44px; }
+  .menu .nv__ctl { flex-wrap: wrap; gap: 8px 24px; padding-bottom: 32px; }
+  .menu .nv__k { min-height: 44px; }
+}
+/* The dialog sits inside the header: undo the dark-table remap (work.css) so its paper and ink match. */
+.menu { --color-bone-100: var(--ink); --color-bone-300: var(--ink-2); --color-bone-500: var(--mute); color: var(--ink); }

@@ -1,0 +1,200 @@
+/* Work: one paper sheet (.wk__sheet) scrolling with the page. .wk__stage marks the pin layout (index that turns the 3D stack). */
+
+/* ---- Stack: a plain list, every detail open ---- */
+.wk { list-style: none; margin: 0; padding: 0; }
+.wk__item { border-top: 1px solid var(--rule); }
+.wk__row { display: flex; align-items: baseline; gap: 16px; min-height: 44px; margin: 0; padding: 16px 0 8px; color: var(--ink); }
+.wk__row > button { all: unset; display: flex; align-items: baseline; gap: 16px; flex: 1; min-width: 0; min-height: 44px; cursor: pointer; }
+/* Titles are never cut: they wrap; the kind column takes at most a third and wraps too (ringMath.ts sizes the pitch to fit). */
+.wk__n { flex: none; white-space: nowrap; color: var(--mute); }
+.wk__title { flex: 1; min-width: 0; text-wrap: balance; }
+.wk__kind { flex: 0 1 auto; max-width: 33%; text-align: right; text-wrap: balance; color: var(--mute); }
+.wk__detail { display: flex; flex-direction: column; gap: 12px; padding-bottom: 32px; color: var(--ink-2); }
+.wk__detail[hidden] { display: none; }
+.wk__pre { margin: 0; color: var(--mute); }
+.wk__full { margin: 0; color: var(--ink); }
+.wk__media { position: relative; margin: 0; aspect-ratio: var(--tile-ratio); max-width: 560px; background: var(--panel); }
+.wk__media canvas { display: block; width: 100%; height: 100%; }
+.wk__media figcaption { position: absolute; top: 8px; left: 8px; padding: 2px 6px; background: var(--paper); color: var(--ink-2); }
+.wk__media:not(:has(canvas)) { border: 1px solid var(--rule); background: none; }
+/* Stack: the generated plate's note sits under the plate, never over its wordmark. */
+.wk__media:has(canvas):not(.wk__stage *) { aspect-ratio: auto; background: none; }
+.wk__media:not(.wk__stage *) canvas { height: auto; aspect-ratio: var(--tile-ratio); background: var(--panel); }
+/* Red is live state only: the always-open stack plates have none, so rr/plates.ts draws its accent in grey (it reads this token). */
+.wk__media:not(.wk__stage *) canvas { --stage-signal: var(--mute); }
+.wk__media:has(canvas):not(.wk__stage *) figcaption { position: static; margin-top: 8px; padding: 0; background: none; color: var(--mute); }
+.wk__line { margin: 0; max-width: 60ch; }
+.wk__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; margin: 0; }
+.wk__facts dt { color: var(--mute); }
+.wk__facts dd { margin: 0; color: var(--ink-2); }
+.wk__repo { margin: 0; }
+.wk__repo a { display: inline-flex; align-items: center; min-height: 44px; }
+.wk__details { display: contents; } /* pin layout: the details after the ring; the world card lays them out (below) */
+
+/* Signal red marks: the front row number, and a short hairline under the index bar. */
+.wk__stage [data-active] .wk__n { color: var(--signal); }
+@media (hover: hover) { .wk__row > button:hover .wk__title { text-decoration: underline; text-decoration-color: var(--signal); text-underline-offset: 6px; text-decoration-thickness: 1px; } }
+
+/* ---- Index (pin layout) ---- */
+.wk__stage { position: relative; }
+.wk__bar { position: relative; display: flex; align-items: center; gap: 24px; min-height: 56px; border-bottom: 1px solid var(--rule); color: var(--mute); }
+.wk__bar::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 32px; height: 1px; background: var(--signal); }
+.wk__bar button { all: unset; flex: 0 1 auto; white-space: normal; line-height: 1.15; min-height: 44px; display: inline-flex; align-items: center; cursor: pointer; color: var(--ink); transition: translate 80ms; }
+@media (hover: hover) { .wk__bar button:hover { color: var(--signal); } }
+.wk__bar button:active, .wk__row > button:active { translate: 0 1px; }
+.wk__bar button:focus-visible { color: var(--signal); outline: 2px solid currentColor; outline-offset: 3px; }
+/* The index is a plain list, front row marked: the drum itself is the 3D stack. */
+.wk__stage .wk { margin-top: 16px; }
+.wk__stage .wk__item { border-top: 1px solid var(--rule); }
+.wk__stage .wk__row { opacity: 0.56; transition: opacity var(--duration-fast), color var(--duration-fast); }
+.wk__stage [data-active] .wk__row { opacity: 1; }
+.wk button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.wk__row > button { transition: translate 80ms; }
+/* The front project’s detail under the index: all six share one grid cell, so the sheet is as tall as the tallest. */
+.wk__stage .wk__details { display: grid; margin-top: 24px; }
+.wk__stage .wk__detail, .wk__stage .wk__detail[hidden] { grid-area: 1 / 1; display: flex; padding-bottom: 0; }
+.wk__stage .wk__detail[hidden] { visibility: hidden; }
+.wk__stage :is(.wk__full, .wk__pre) { display: none; } /* already the front row above */
+.wk__stage .wk__facts { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.wk__stage .wk__facts > div { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 12px; }
+
+/* Raster: no partial opacity, inactive rows in --mute, no transitions. */
+:root[data-mode="raster"] .wk__stage .wk__row { opacity: 1; color: var(--mute); transition: none; }
+:root[data-mode="raster"] .wk__stage [data-active] .wk__row { color: var(--ink); }
+/* ---- The paper world (src/world) ----
+   One fixed canvas behind the page from the top of Work to the top of Contact (core.ts clips it there). With the world
+   on, Work, About and Lab become paper cards over a dark table: a column on the left from 900 px, full width below it
+   with a window onto each station. Without WebGL none of this applies and the page stays as it was. */
+.world { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: none; background: var(--table); }
+.wk__world, .wk__hit, .world-slot, .wbay { display: none; }
+:root:is(.has-world, .world-wait) {
+  --table: #1d1c19;
+  --card: var(--paper);
+  --wcard-w: clamp(400px, 38vw, 580px);
+  --wslot: min(92vw, 62svh);
+}
+:root:is(.has-world, .world-wait)[data-mode="raster"] { --table: #080807; --card: var(--panel); }
+:root.has-world .world { display: block; }
+/* Placeholder chip on a Lab row (the card face prints the same word): outlined, never the signal red. */
+.lb__chip { display: inline-block; padding: 2px 8px; border: 1px solid currentColor; text-transform: uppercase; }
+:root:is(.has-world, .world-wait) :is(#work, #about, #lab) { border-top: 0; }
+/* The seam rule would cross the clear desk gap above the Work sheet. */
+:root:is(.has-world, .world-wait) #work::before, :root:is(.has-world, .world-wait) #work::after { display: none; }
+/* Narrow cards: the kind drops under the title, so the title gets the whole measure. */
+:root:is(.has-world, .world-wait) .wk__row:not(:has(button)), :root:is(.has-world, .world-wait) .wk__row > button {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 16px; row-gap: 2px; align-items: baseline;
+}
+:root:is(.has-world, .world-wait) .wk__kind { grid-column: 2; max-width: none; text-align: left; }
+/* Cards: text on paper, the page's own ink inside. */
+:root:is(.has-world, .world-wait) :is(#work .wk__sheet, #about .wcard, #lab .wcard) {
+  --color-bone-100: var(--ink); --color-bone-300: var(--ink-2); --color-bone-500: var(--mute); --color-ink-800: var(--rule);
+  background: var(--card); color: var(--ink);
+}
+
+@media (min-width: 900px) {
+  /* A paper column on the left; the world is framed in the rest of the viewport (core.ts reads #work's right edge). */
+  :root:is(.has-world, .world-wait) :is(#work, #about, #lab) {
+    box-sizing: border-box;
+    width: var(--wcard-w);
+    margin-left: var(--grid-margin);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Work: one cream sheet like About and Lab, in normal flow, scrolling with the page. The 30vh above it is
+     clear table: the world canvas starts at Work’s top, so Hero hands over to a dark desk before the paper arrives. */
+  :root:is(.has-world, .world-wait) #work { padding: 30vh 0 0; background: none; }
+  :root:is(.has-world, .world-wait) #work .wk__sheet { position: relative; grid-template-columns: minmax(0, 1fr); padding: 24px 40px 48px; }
+  /* About, Lab: the paper is the .wcard panel, sticky inside its own section over the bay after it, so it holds
+     through its hand-over and leaves when the section ends. Block, not grid: a grid item's sticky range is its own row.
+     panels.ts writes --panel-top: short panels stick under the nav, tall ones once their foot is 24 px above the fold. */
+  :root:is(.has-world, .world-wait) :is(#about, #lab) { display: block; padding: 0; }
+  :root:is(.has-world, .world-wait) :is(#about, #lab) .wcard {
+    position: sticky;
+    top: var(--panel-top, calc(var(--nav-h) + 24px));
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 40px 48px;
+  }
+  /* A panel taller than the room under the nav is a window (panels.ts): capped, its contents scroll with the page. */
+  :root:is(.has-world, .world-wait) :is(#about, #lab) .wcard[data-window] { height: var(--panel-h); overflow: hidden; }
+  :root:is(.has-world, .world-wait) #about .wcard { animation: none; } /* the hand-over owns the panel's translate (motion.css drift) */
+  :root:is(.has-world, .world-wait)[data-mode="raster"] :is(#work .wk__sheet, #about .wcard, #lab .wcard) { outline: 1px solid var(--rule); outline-offset: -1px; }
+  :root:is(.has-world, .world-wait) :is(#work, #about, #lab) :is([class*="col-span"], [class*="col-start"]) { grid-column: 1 / -1; }
+  /* Transit bays: the table travels between the cards; the last bay holds the sign-off before Contact. About's bay runs
+     50vh past Lab's top (Lab pulls up by as much), so About stays stuck past mid-transit, where its fade ends and where
+     reduced motion cuts; same offsets as before. */
+  :root:is(.has-world, .world-wait) #about { margin-top: 45vh; }
+  :root:is(.has-world, .world-wait) #lab { margin-top: -50vh; }
+  :root:is(.has-world, .world-wait) #about .wbay { display: block; height: calc(95vh + var(--panel-travel, 0px)); }
+  /* The sign-off transit starts as Contact enters (sign.ts), so 35vh is enough to read the last entry before the hand-over. */
+  :root:is(.has-world, .world-wait) #lab .wbay { display: block; height: calc(35vh + var(--panel-travel, 0px)); }
+  /* Lab's seam would cross the About panel held above it, and About's floats on the open table 45vh above its panel
+     (in Raster a dashed rule with red end squares): the panel edge is the seam here. */
+  :root:is(.has-world, .world-wait) :is(#about, #lab)::before, :root:is(.has-world, .world-wait) :is(#about, #lab)::after { display: none; }
+
+  @media (max-height: 820px) { :root:is(.has-world, .world-wait) .wk__stage .wk__repo { display: none; } } /* short screens: the repo link lives on the board */
+  :root:is(.has-world, .world-wait) .wk__stage .wk__media { display: none; } /* the 3D stack is the picture */
+  /* The table right of the card turns the drum like the grip. */
+  :root:is(.has-world, .world-wait) .wk__hit {
+    display: block; position: absolute; top: 0; bottom: 0; left: calc(100% + 64px);
+    width: calc(100vw - var(--wcard-w) - var(--grid-margin) - 128px);
+    touch-action: none; cursor: grab;
+  }
+  /* Touch tablets keep the stack list; the same table strip takes a horizontal swipe, vertical still scrolls. */
+  :root:is(.has-world, .world-wait) .wk__world {
+    display: block; position: absolute; top: 0; bottom: 0; left: calc(100% + 64px);
+    width: calc(100vw - var(--wcard-w) - var(--grid-margin) - 128px);
+    touch-action: pan-y;
+  }
+}
+
+@media (max-width: 899px) {
+  /* Heads sit on the table in light ink; each station gets a window; the rest is the card. */
+  :root:is(.has-world, .world-wait) :is(#work, #about, #lab) {
+    --color-bone-100: #ebe7dd; --color-bone-300: #b8b3a7; --color-bone-500: #8c877c; --color-ink-800: #2c2a26;
+    background: none; color: #ebe7dd;
+  }
+  /* Before the canvas exists the light heads still need the table under them. */
+  :root.world-wait :is(#work, #about, #lab) { background: var(--table); }
+  :root:is(.has-world, .world-wait) :is(#about, #lab) .world-slot { display: block; height: var(--wslot); margin-top: 24px; }
+  :root:is(.has-world, .world-wait) .wk__world { display: block; position: relative; width: 100%; height: var(--wslot); margin-bottom: 24px; touch-action: pan-y; cursor: grab; }
+  /* Bottom clearance: the fixed Motion and Mode controls (about 72 px with their inset) never cover the card's end. */
+  :root:is(.has-world, .world-wait) #work { padding-top: 12vh; }
+  :root:is(.has-world, .world-wait) #work .wk__sheet { padding: 8px 20px 96px; }
+  :root:is(.has-world, .world-wait) :is(#about, #lab) .wcard { padding: 8px 20px 40px; margin-top: 24px; }
+  /* Only table between the card and Contact. The card's hand-over fade (first quarter of the transit) clears it before the
+     sheets land. */
+  :root:is(.has-world, .world-wait) #lab { margin-bottom: 8vh; }
+}
+
+/* app.css sizes #work's reserve for a pinned layout, so it is released here and
+   the section is as tall as its sheet. Specificity beats the unlayered app.css rules. */
+html.enhanced body .rv-work { height: auto; }
+
+/* About-style drift: the sheet moves 32 px across its pass (same keyframes and gate as #about .wcard in motion.css). */
+@supports (animation-timeline: view()) {
+  @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+    html.enhanced #work .wk__sheet { animation: sheet-drift linear both; animation-timeline: view(); }
+    html.enhanced[data-mode="raster"] #work .wk__sheet { animation-timing-function: steps(4); }
+  }
+}
+
+/* Hand-over, scrubbed by the transit: core.ts writes --w (presence) and --wd (-1 outgoing, 1 incoming) on each
+   panel, with data-hand while it is under 1 ("off" once it is invisible). The outgoing panel fades and lifts 16 px over
+   the first 40% of its transit, the incoming one enters over the last 40%. No translate at rest or when off: #work's
+   ScrollTrigger pin must never measure a translated section. Never inert or hidden: Tab still reaches it. */
+:root.has-world [data-hand] {
+  --o: clamp(0, (var(--w, 1) - 0.6) / 0.4, 1);
+  opacity: var(--o);
+  translate: 0 calc((1 - var(--o)) * 16px * var(--wd, 1));
+}
+:root.has-world [data-hand="off"] { opacity: 0; translate: none; pointer-events: none; }
+
+/* Over the table (core.ts sets .world-band from the top of Work to the top of Contact) the header goes dark, both modes.
+   Links already ease their colour; the global reduced-motion rule makes both instant. */
+:root.has-world.world-band .nav {
+  --color-bone-100: #ebe7dd; --color-bone-300: #b8b3a7; --color-bone-500: #8c877c; --rule: #2c2a26;
+  background: var(--table); color: #ebe7dd;
+}
+
+@media (forced-colors: active) {
+  .world, :root:is(.has-world, .world-wait) :is(.wk__world, .wk__hit, .world-slot) { display: none; }
+}

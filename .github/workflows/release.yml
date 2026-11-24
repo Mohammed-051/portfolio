@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # tsc -b runs inside the build, so this is also the type check
+      - run: npm run build
+      - run: node scripts/check-assets.mjs
+      - run: node scripts/check-secrets.mjs
+      - run: node scripts/check-bundle.mjs
+      - run: node scripts/check-release.mjs
+      - name: Tag matches package.json
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME#v}" != "$v" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $v" >&2
+            exit 1
+          fi
+      - name: Extract release notes
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            /^## \[/ { on = 0 }
+            on
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "No CHANGELOG.md section for $v" >&2
+            exit 1
+          fi
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag

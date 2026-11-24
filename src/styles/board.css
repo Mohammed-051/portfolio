@@ -1,0 +1,90 @@
+/* Project board (lazy, with ProjectBoard.tsx). A paper dossier over the viewport, typed with each mode's HTML UI type system:
+   --font-display and --font-read (Render: Newsreader and Instrument Sans; Raster: Doto and JetBrains Mono), never the handwritten
+   ink of the 3D cards. Signal red is a hairline, a label tick or a hover arrow, never a fill. z-index 150: above the intro
+   (100), below the cursor. */
+.bd { position: fixed; inset: 0; z-index: 150; background: var(--paper); color: var(--ink); overscroll-behavior: contain; }
+.bd__paper { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.bd :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.bd__head {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 8px max(16px, var(--grid-margin, 24px)); background: var(--paper); border-bottom: 1px solid var(--rule);
+}
+.bd__head::after { content: ""; position: absolute; left: max(16px, var(--grid-margin, 24px)); bottom: -1px; width: 32px; height: 1px; background: var(--signal); }
+.bd__idx { margin: 0; color: var(--mute); }
+.bd__back {
+  all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 4px;
+  cursor: pointer; color: var(--ink); text-transform: uppercase; transition: translate 80ms;
+}
+.bd__back span { transition: translate var(--duration-fast, 160ms), color var(--duration-fast, 160ms); }
+@media (hover: hover) { .bd__back:hover span { color: var(--signal); translate: -3px 0; } }
+.bd__back:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.bd__back:active { translate: 0 1px; }
+
+.bd__wrap { box-sizing: border-box; width: min(100%, 1180px); margin: 0 auto; padding: clamp(24px, 5vw, 56px) max(16px, var(--grid-margin, 24px)) clamp(48px, 8vw, 96px); display: flex; flex-direction: column; gap: clamp(24px, 3vw, 40px); }
+.bd__title-row { display: flex; flex-direction: column; gap: 12px; }
+.bd__pre, .bd__meta { margin: 0; color: var(--mute); }
+.bd__meta { display: flex; flex-wrap: wrap; gap: 4px 24px; }
+.bd__title { margin: 0; font-size: clamp(2rem, 1.2rem + 3.6vw, 4.25rem); line-height: 1.02; max-width: 18ch; text-wrap: balance; color: var(--ink); }
+
+/* Slots: 16:9 hero, 4:3 gallery. The placeholder sits under the <img>; the image hides it once it has loaded. */
+.bd__slot { position: relative; margin: 0; width: 100%; overflow: hidden; background: var(--panel); border: 1px solid var(--rule); }
+.bd__slot[data-ratio="16:9"] { aspect-ratio: 16 / 9; }
+.bd__slot[data-ratio="4:3"] { aspect-ratio: 4 / 3; }
+.bd__slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity var(--duration-base, 240ms) linear; }
+.bd__slot[data-ok] img { opacity: 1; }
+.bd__slot[data-ok] { border-color: transparent; }
+.bd__ph {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; color: var(--mute);
+  background: repeating-linear-gradient(135deg, transparent 0 11px, color-mix(in srgb, var(--rule) 70%, transparent) 11px 12px);
+}
+.bd__ph::before { content: ""; position: absolute; inset: 12px; border: 1px dashed var(--rule); pointer-events: none; }
+.bd__ph-name { color: var(--ink-2); padding: 2px 8px; background: var(--panel); }
+.bd__ph-ratio { padding: 0 8px; background: var(--panel); }
+.bd__gal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px); }
+
+/* Sections: label column and text column from 900 px, stacked below. A hairline above each, the label carries a red tick. */
+.bd__body, .bd__foot { display: flex; flex-direction: column; }
+.bd__sec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 24px 0 32px; border-top: 1px solid var(--rule); }
+.bd__h { position: relative; margin: 0; color: var(--mute); text-transform: uppercase; }
+.bd__sec .bd__h::before { content: ""; position: absolute; left: 0; top: -25px; width: 24px; height: 1px; background: var(--signal); }
+.bd__p { margin: 0; max-width: 62ch; color: var(--ink-2); font-family: var(--font-read); font-size: var(--text-lead, 1.125rem); line-height: 1.55; text-wrap: pretty; }
+.bd__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; max-width: 62ch; }
+.bd__list li { position: relative; padding: 10px 0 10px 24px; border-bottom: 1px solid var(--rule); color: var(--ink-2); font-family: var(--font-read); font-size: var(--text-lead, 1.125rem); line-height: 1.4; }
+.bd__list li::before { content: ""; position: absolute; left: 0; top: 1.05em; width: 12px; height: 1px; background: var(--signal); }
+.bd__todo { margin: 0; display: inline-block; align-self: start; padding: 6px 10px; border: 1px dashed var(--rule); color: var(--mute); }
+
+.bd__foot { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; padding-top: 24px; border-top: 1px solid var(--rule); }
+.bd__foot .bd__h { margin-bottom: 12px; }
+.bd__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.bd__chips li { padding: 4px 10px; border: 1px solid var(--rule); color: var(--ink-2); }
+.bd__people { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.bd__people dt { color: var(--mute); }
+.bd__people dd { margin: 2px 0 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.bd__links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.bd__a { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--rule); overflow-wrap: anywhere; }
+@media (hover: hover) { .bd__a:hover { text-decoration-color: var(--signal); } }
+.bd__a span { color: var(--signal); }
+
+@media (min-width: 900px) {
+  .bd__sec { grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); gap: 24px; }
+  .bd__foot { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr); gap: 40px; }
+}
+@media (max-width: 599px) { .bd__gal { grid-template-columns: minmax(0, 1fr); } }
+
+/* Raster: hard edges, stepped motion. */
+:root[data-mode="raster"] .bd__slot img { transition: none; }
+:root[data-mode="raster"] .bd__ph { background: repeating-linear-gradient(135deg, transparent 0 8px, var(--rule) 8px 9px); }
+
+/* Unfold: a clip wipe from the top with a short settle, ~520 ms eased; leaving reverses it in ~380 ms. Raster steps.
+   Reduced motion (data-still): a plain fade. */
+@keyframes bd-open { from { clip-path: inset(0 0 100% 0); translate: 0 -2.5%; } to { clip-path: inset(0 0 0 0); translate: 0 0; } }
+@keyframes bd-close { from { clip-path: inset(0 0 0 0); translate: 0 0; } to { clip-path: inset(0 0 100% 0); translate: 0 -2.5%; } }
+@keyframes bd-fade-in { from { opacity: 0; } }
+@keyframes bd-fade-out { to { opacity: 0; } }
+.bd { animation: bd-open 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.bd[data-out] { animation: bd-close 380ms cubic-bezier(0.64, 0, 0.78, 0) both; }
+:root[data-mode="raster"] .bd { animation-timing-function: steps(6, end); }
+:root[data-mode="raster"] .bd[data-out] { animation-timing-function: steps(4, end); }
+.bd[data-still] { animation: bd-fade-in 140ms linear both; }
+.bd[data-still][data-out] { animation: bd-fade-out 120ms linear both; }

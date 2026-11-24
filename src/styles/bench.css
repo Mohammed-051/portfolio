@@ -1,0 +1,81 @@
+/* Lab, entry L.01: the heading and the "From a line to pixels" showcase. Colours come from the mode tokens, so Render and Raster
+   both read correctly. Signal red marks the active tab and hover borders; never a fill. */
+/* Doto's dots hang below the tight display line box; the reveal clip cut them. Room under the line, same advance. */
+:root[data-mode="raster"] :is(#bench-title, #bench-title .rise) { padding-bottom: 0.14em; margin-bottom: -0.14em; }
+
+.bench__btn {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-family: var(--font-read);
+  font-size: var(--text-label);
+  font-weight: var(--button-weight);
+  letter-spacing: var(--button-track);
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+.bench__btn:hover { color: var(--ink); border-color: var(--signal); }
+.bench__btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+/* "From a line to pixels" (rr/showcase): four self-playing demos in a tablist. Nothing here is scroll-linked and no height
+   is reserved: the block is exactly as tall as its figure. Mono readouts in both modes. */
+.xs { container-type: inline-size; --xs-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace; }
+.xs__fig { margin-top: 24px; }
+.xs__tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.xs__tab {
+  display: inline-flex;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-family: var(--font-read);
+  font-size: var(--text-label);
+  font-weight: var(--button-weight);
+  letter-spacing: var(--button-track);
+  text-transform: uppercase;
+  background: transparent;
+  cursor: pointer;
+  align-items: center;
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+.xs__tab:hover { color: var(--ink); border-color: var(--signal); }
+.xs__tab[aria-selected="true"] { color: var(--ink); border-color: var(--signal); box-shadow: inset 0 -2px 0 var(--signal); }
+.xs__n { font-family: var(--xs-mono); font-size: 0.85em; color: var(--mute); }
+.xs__tab[aria-selected="true"] .xs__n { color: var(--signal); }
+.xs__tab:focus-visible, .xs__fig .bench__btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+.xs__body { display: grid; gap: 24px; }
+/* Container, not viewport: inside the world's Lab card the column is about 470 px wide at any screen width. */
+@container (min-width: 760px) { .xs__body { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; } }
+/* The aspect box keeps the block from jumping before the canvas is sized. 28 x 24 cells; the portrait tab is 56 x 63. */
+.xs__stage { display: grid; place-items: center; min-width: 0; max-height: 70vh; aspect-ratio: 28 / 24; background: var(--panel); }
+.xs__stage[data-fig="0"] { aspect-ratio: 56 / 63; }
+:root[data-mode="render"] .xs__stage { border: 1px solid var(--rule); }
+.xs__sheet { position: relative; width: max-content; }
+.xs__canvas { display: block; }
+.xs__fx { position: absolute; left: 0; top: 0; pointer-events: none; }
+
+.xs__side { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.xs__no { margin: 0; color: var(--signal); font-family: var(--xs-mono); }
+.xs__head { margin: 0; font-size: var(--text-heading); line-height: 1.1; text-wrap: balance; }
+.xs__blurb { margin: 0; max-width: 46ch; color: var(--ink-2); text-wrap: pretty; }
+.xs__ctl { display: flex; flex-wrap: wrap; gap: 8px; }
+.xs__out {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 16px;
+  align-content: start;
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--signal);
+  font-family: var(--xs-mono);
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+}
+.xs__out dt { color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; }
+.xs__out dd { margin: 0; color: var(--ink); text-align: end; overflow-wrap: anywhere; }
+.xs__cap { margin-top: 16px; color: var(--mute); }
