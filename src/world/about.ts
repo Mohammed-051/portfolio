@@ -1,11 +1,11 @@
 // About desk: loose paper sheets and a dark notebook under window light. The window is an invisible occluder between
 // the key and the desk; only its shadow (the light bars) is ever seen. Nothing here is content: the About card is.
-import { BoxGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial, Path, Shape, ShapeGeometry, Vector3 } from "three";
+import { BoxGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial, type Object3D, Path, Raycaster, Shape, ShapeGeometry, Vector2, Vector3 } from "three";
 import { SHEETS as INFO } from "../lib/content";
 import { SECTIONS, SITE } from "../lib/site";
 import type { Mode } from "../rr/store.ts";
-import type { Ctx, Rest, Station } from "./core.ts";
-import { withDesk } from "./desk.ts";
+import type { Ctx, Frame, Rest, Station } from "./core.ts";
+import { withDesk, type Place } from "./desk.ts";
 import { drawCard } from "./faces.ts";
 import { glb, planar } from "./glb.ts";
 import { kit } from "./kit.ts";
@@ -16,6 +16,13 @@ const LIGHT = new Vector3(0.6, 0.55, 0.6).normalize();
 // Sheets: x, y (from LOOK), turn in degrees. Fanned like a working pile, the top one carries the section mark.
 const SHEETS: [number, number, number][] = [[-1.4, 0.5, 14], [-0.9, -0.2, -9], [0.3, 0.6, 6], [1.2, -0.3, -16], [0.6, 0.1, 22], [-0.1, -0.15, -4]];
 const LEVEL = 0.03, TOP = 0.006 + (SHEETS.length - 1) * LEVEL; // pile level spacing and the top sheet's centre height
+// Fan-in: sheets 0, 1, 2 and 4 start as a squared pile on the name card and slide out as About arrives (f.w 0..1), each
+// window `span` of f.w long, `gap` later than the one before. pull: share of the offset kept in the pile; turn: the pile's
+// per-sheet degrees; settle: overshoot of the ease; steps: Raster's quantisation. Sheet 3 (the clip) and the name card never move.
+const FAN = { movers: [0, 1, 2, 4], pull: 0.12, turn: [1.5, -1, 1, 0, -1.5, 0], from: 0.25, gap: 0.08, span: 0.45, settle: 0.8, steps: 6 };
+// Hover: the sheet under the pointer rises `lift` wu and turns `turn` degrees, every sheet and the notebook above it rise
+// with it; rate: 1/s (about 180 ms); soft: share of its contact shadow that fades.
+const HOVER = { lift: 0.02, turn: 1.2, rate: 16, soft: 0.25 };
 
 // Notes in the hand on the notebook's unprinted ruled pages, word for word from the About sheets (lib/content).
 // Big lines about two ruled rows tall, small ones 1.25 rows; u underlines the line. Drawn once Caveat has loaded.
@@ -239,14 +246,76 @@ export function createAboutStation(ctx: Ctx, section: HTMLElement): Station {
 
   const rest: Rest = { look: LOOK, dir: new Vector3(-0.5, -0.8, 0.55).normalize(), dist: 7.5, half: 1.6, wide: 2.0, light: LIGHT, pool: 2.6 };
   // A loupe on the table left of the pile; a paper clip on sheet 3 (moved +0.4 x off the printed top sheet).
-  return withDesk(ctx, [
-    { prop: "loupe", x: LOOK.x - 2.1, y: LOOK.y - 1.0, turn: 0 },
-    { prop: "paperclip", x: LOOK.x + 0.8, y: LOOK.y - 0.9, z: 0.006 + 3 * LEVEL + 0.008, turn: 40 },
-  ], {
+  const clip: Place = { prop: "paperclip", x: LOOK.x + 0.8, y: LOOK.y - 0.9, z: 0.006 + 3 * LEVEL + 0.008, turn: 40 };
+
+  // Fan and hover. Each sheet's rest pose is SHEETS; hover adds a lift that every sheet above it shares (so a curled end
+  // never meets the sheet over it) and a turn on the hovered sheet alone. The clip rides sheet 3 by mutating its Place,
+  // which desk.ts reads after this frame.
+  const hv = SHEETS.map(() => 0), ray = new Raycaster(), ndc = new Vector2();
+  const bookZ = book.position.z, shadowZ = bookShadow.position.z, clipZ = clip.z!;
+  const [s3x, s3y, s3r] = SHEETS[3]!, clipAt = { x: clip.x - LOOK.x - s3x, y: clip.y - LOOK.y - s3y };
+  let hit = -1, lpx = NaN, lpy = NaN;
+  /** Eased fan progress of mover j at station presence w: 0 the pile, 1 the rest pose, a little past 1 on the way. */
+  const fan = (j: number, w: number) => {
+    let t = Math.min(1, Math.max(0, (w - FAN.from - j * FAN.gap) / FAN.span));
+    if (ctx.reduced) t = w > 0.5 ? 1 : 0;
+    else if (ctx.stepped) t = Math.round(t * FAN.steps) / FAN.steps;
+    const u = t - 1;
+    return t >= 1 ? 1 : t <= 0 ? 0 : 1 + (FAN.settle + 1) * u * u * u + FAN.settle * u * u;
+  };
+  function pose(dt: number, f: Frame): boolean {
+    const live = f.focus && f.over && f.px >= 0 && !ctx.reduced;
+    if (!live) { hit = -1; lpx = NaN; }
+    else if (f.px !== lpx || f.py !== lpy) { // only when the pointer moved
+      lpx = f.px; lpy = f.py;
+      ndc.set((f.px / f.vw) * 2 - 1, 1 - (f.py / f.vh) * 2);
+      ray.setFromCamera(ndc, ctx.camera);
+      const h = ray.intersectObjects([...sheets, book], true)[0];
+      hit = h ? (sheets as Object3D[]).indexOf(h.object) : -1; // the notebook hides what is under it
+      if (hit === sheets.length - 1) hit = -1; // the name card stays still
+    }
+    const k = 1 - Math.exp(-dt * HOVER.rate);
+    let busy = false, up = 0, up3 = 0;
+    const [px0, py0] = SHEETS.at(-1)!;
+    sheets.forEach((s, i) => {
+      const g = i === hit ? 1 : 0;
+      if (ctx.stepped || ctx.reduced) hv[i] = g;
+      else if (Math.abs(g - hv[i]!) > 0.002) { hv[i] = hv[i]! + (g - hv[i]!) * k; busy = true; } else hv[i] = g;
+      up = Math.max(up, hv[i]!);
+      if (i === 3) up3 = up;
+      let [x, y, r] = SHEETS[i]!;
+      const j = FAN.movers.indexOf(i);
+      if (j >= 0) {
+        const e = fan(j, f.w);
+        x = x * e + (px0 + (x - px0) * FAN.pull) * (1 - e);
+        y = y * e + (py0 + (y - py0) * FAN.pull) * (1 - e);
+        r = r * e + FAN.turn[i]! * (1 - e);
+      }
+      s.position.set(LOOK.x + x, LOOK.y + y, 0.006 + i * LEVEL + HOVER.lift * up);
+      s.rotation.z = (r + (i % 2 ? -1 : 1) * HOVER.turn * hv[i]!) * DEG;
+      const b = levels[i - 1];
+      if (b) {
+        b.position.set(s.position.x, s.position.y, s.position.z - 0.0065);
+        b.rotation.z = s.rotation.z;
+        b.material.opacity = 1 - HOVER.soft * hv[i]!;
+      }
+    });
+    book.position.z = bookZ + HOVER.lift * up;
+    bookShadow.position.z = shadowZ + HOVER.lift * up;
+    const t3 = sheets[3]!.rotation.z - s3r * DEG, co = Math.cos(t3), si = Math.sin(t3);
+    clip.x = sheets[3]!.position.x + clipAt.x * co - clipAt.y * si;
+    clip.y = sheets[3]!.position.y + clipAt.x * si + clipAt.y * co;
+    clip.z = clipZ + HOVER.lift * up3;
+    clip.turn = 40 + (t3 / DEG);
+    return busy;
+  }
+
+  return withDesk(ctx, [{ prop: "loupe", x: LOOK.x - 2.1, y: LOOK.y - 1.0, turn: 0 }, clip], {
     rest,
     mark: () => section.getBoundingClientRect().top,
     slot: () => section.querySelector(".world-slot"),
-    frame(_dt, _now, f) { // a still life: the camera orbit and the light parallax are its only motion
+    frame(dt, _now, f) { // the camera orbit, the light parallax, the sheets' fan-in and their hover are its only motion
+      const busy = pose(dt, f);
       // The hand is fetched only once the camera heads for About; then both pages' textures get the notes.
       if (!handAsked && f.w > 0) {
         handAsked = true;
@@ -261,7 +330,7 @@ export function createAboutStation(ctx: Ctx, section: HTMLElement): Station {
           ctx.request();
         }, () => {});
       }
-      if (asked) return false;
+      if (asked) return busy;
       asked = true;
       void glb(ctx, "notebook", ["edge", "face", "cover", "band"]).then((g) => {
         if (gone) return;
@@ -271,7 +340,7 @@ export function createAboutStation(ctx: Ctx, section: HTMLElement): Station {
         book.add(nb);
         ctx.request();
       }, () => {});
-      return false;
+      return busy;
     },
     setMode(m: Mode) {
       sheets.forEach((s, i) => {

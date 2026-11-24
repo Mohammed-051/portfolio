@@ -24,7 +24,7 @@ function read(t: EventTarget | null, y: number): [State, string] {
   if (t.closest("input, textarea, select, [contenteditable='true']") || (t.closest(PROSE) && !t.closest(".hero, a, button"))) return ["text", ""];
   if (t.closest("a[href]")) return ["link", ""];
   if (t.closest("button, [role='button'], [data-pick], summary, label")) return ["select", ""];
-  return ["default", ""];
+  return named ? ["expand", named] : ["default", ""]; // the world names a desk object under the pointer on <html>
 }
 
 interface Dot { kill(): void }

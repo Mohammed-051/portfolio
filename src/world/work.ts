@@ -8,6 +8,7 @@ import { registry } from "../rr/registry.ts";
 import { mod } from "../rr/ringMath.ts";
 import { store, type Mode } from "../rr/store.ts";
 import { type Ctx, type Frame, type Rest, type Station, type Target } from "./core.ts";
+import { cues, lockAxis, release, spring, SPRING } from "./cues.ts";
 import { drawFace, fontsFor } from "./faces.ts";
 import { withDesk } from "./desk.ts";
 import { kit } from "./kit.ts";
@@ -19,7 +20,9 @@ const R = PH / (2 * Math.tan(Math.PI / N)) + 0.16; // drum apothem: an open hexa
 const SINK = 0.34, SHRINK = 0.14;
 const C = new Vector3(0, 0, 1.12); // axle centre above the table
 const PITCH = 40 * DEG; // the front plate faces a camera 40 degrees off the vertical
-const M = { lift: 0.07, press: 0.13, tilt: 6, dragPx: 160, step: { render: 480, raster: 160 } };
+// peek: lift of a hovered neighbour plate (wu). fold: f.w where the plates are fully back in their stack, and where they start to fold.
+const M = { lift: 0.07, press: 0.13, peek: 0.04, tilt: 6, dragPx: 160, step: 160, fold: { end: 0.5, start: 0.95 } };
+const CUE_AT = { x: 1.5, y: 0.2, turn: -8 }; // the drag cue decal on the table, clear of the pencil (0.8, -0.8) and the rule
 const X = new Vector3(1, 0, 0);
 const FRONT = new Vector3(0, -Math.sin(PITCH), Math.cos(PITCH));
 const UP = new Vector3().crossVectors(FRONT, X);
@@ -28,7 +31,6 @@ const ENTRY = new Vector3(0, -0.05, 0.999).normalize(); // high, near-vertical: 
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const smooth = (x: number) => x * x * (3 - 2 * x);
-const outExpo = (x: number) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)); // close to the 0.16,1,0.3,1 curve
 
 export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<Station> {
   await fontsFor(ctx.mode);
@@ -56,6 +58,7 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
   scene.add(shadow, ...levels);
 
   // The only red: a spine on the active plate while it is live (hover, press, drag).
+  const cue = cues(ctx, K, CUE_AT);
   const spineM = pair(0xb62e19, 0xff4f3a);
   const spine = new Mesh(keep(new BoxGeometry(0.03, PH, PT * 1.6)));
   scene.add(spine);
@@ -65,14 +68,17 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     mode = m;
     plates.forEach((p, i) => (p.material = matsFor(i, m)));
     spine.material = spineM[m];
+    cue.setMode(m);
     faces.forEach((f) => f.ensure(m));
     ctx.request();
   }
 
   // ---- State. o is the drum offset in rows, like the ring's o = s + e.
   const S = {
-    manual: 0, tw: null as null | { from: number; to: number; t0: number; dur: number; stepped: boolean },
+    manual: 0, tw: null as null | { from: number; to: number; t0: number; dur: number }, sp: null as null | { x: number; v: number; to: number },
     hu: 0.5, hv: 0.5, press: false, drag: false, a: 0, dragEnd: 0,
+    ax: "" as "" | "x" | "y", v: 0, vt: 0, vm: 0, // drag axis, release speed (rows/s), last sample time and row
+    hov: -1, cur: null as null | HTMLElement, gone: false, // hovered neighbour plate, the element carrying the cursor label, exit reset done
     live: plates.map(() => ({ lift: 0, tx: 0, ty: 0 })),
     fo: null as null | { from: number; to: number; t0: number; dur: number; stepped: boolean; then?: (() => void) | undefined }, // camera glide
   };
@@ -85,10 +91,19 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
   const hitSel = () => (pin() ? ".wk__hit" : ".wk__world");
   const hitOf = (t: EventTarget | null) => (t instanceof Element ? t.closest<HTMLElement>(hitSel()) : null);
 
-  function tweenTo(to: number) {
-    S.tw = ctx.reduced ? null : { from: S.manual, to, t0: performance.now(), dur: M.step[mode], stepped: ctx.stepped };
+  /** Settles the stack on row `to`: a cut under reduced motion, the 4 step tween in Raster, a damped spring in Render (v: rows/s). */
+  function tweenTo(to: number, v = S.sp?.v ?? 0) {
+    S.tw = S.sp = null;
     if (ctx.reduced) S.manual = to;
+    else if (ctx.stepped) S.tw = { from: S.manual, to, t0: performance.now(), dur: M.step };
+    else S.sp = { x: S.manual, v: clamp(v, -SPRING.cap, SPRING.cap), to };
     ctx.request();
+  }
+  /** Writes the cursor label on the hit element (cursor.ts shows the nearest data-cursor; none falls back to "Drag"). */
+  function label(el: HTMLElement | null, text: string) {
+    if (S.cur && (S.cur !== el || !text)) delete S.cur.dataset["cursor"];
+    S.cur = el && text ? el : null;
+    if (S.cur && S.cur.dataset["cursor"] !== text) S.cur.dataset["cursor"] = text;
   }
   /** Glides ctx.focus.k to `to` (500 ms, eased; stepped in Raster, a jump under reduced motion), then runs `then`. */
   function glide(to: number, then?: () => void) {
@@ -115,21 +130,28 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     return hit ? plates.findIndex((p) => p === hit.object) : -1;
   }
 
-  // ---- Stack turning: horizontal drag turns, release snaps, a tap selects the plate under it.
+  // ---- Stack turning: a drag turns (up or left is next; touch only sideways, so a vertical swipe stays the page's scroll),
+  // release settles, a tap or click selects the plate under it.
   const ac = new AbortController();
   const { signal } = ac;
   let x0 = 0, y0 = 0, m0 = 0, pid = -1;
   stage.addEventListener("pointerdown", (e) => {
     if (!hitOf(e.target) || e.button !== 0 || boardOpen()) return;
     S.press = true;
-    if (!pin()) { pid = e.pointerId; x0 = e.clientX; y0 = e.clientY; m0 = S.manual; S.tw = null; S.drag = false; }
+    x0 = e.clientX; y0 = e.clientY;
+    if (!pin()) { pid = e.pointerId; m0 = S.vm = S.manual; S.tw = S.sp = null; S.drag = false; S.ax = ""; S.v = 0; S.vt = e.timeStamp; }
     ctx.request();
   }, { signal });
   stage.addEventListener("pointermove", (e) => {
     if (e.pointerId !== pid) return;
-    const dx = e.clientX - x0;
-    if (!S.drag && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(e.clientY - y0)) { S.drag = true; stage.setPointerCapture?.(pid); }
-    if (S.drag) S.manual = m0 - dx / M.dragPx;
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    S.ax ||= lockAxis(dx, dy, e.pointerType === "touch");
+    if (S.ax && !S.drag) { S.drag = true; stage.setPointerCapture?.(pid); }
+    if (S.drag) {
+      const m = m0 - (S.ax === "x" ? dx : dy) / M.dragPx, dt = (e.timeStamp - S.vt) / 1000;
+      if (dt > 0.004) { S.v += ((m - S.vm) / dt - S.v) * 0.5; S.vt = e.timeStamp; S.vm = m; }
+      S.manual = m;
+    }
     ctx.request();
   }, { signal, passive: true });
   /** A click or tap on a plate brings it to the front: the ring in the pin layout, the shortest turn in the stack.
@@ -153,11 +175,15 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     const dragged = S.drag;
     if (e.pointerId === pid) {
       pid = -1;
-      if (dragged) { tweenTo(Math.round(S.manual)); S.dragEnd = performance.now(); }
+      if (dragged) {
+        const v = e.timeStamp - S.vt > 100 ? 0 : S.v; // held still before letting go: no flick
+        tweenTo(release(m0, S.manual, v), v);
+        S.dragEnd = performance.now();
+      }
       S.drag = false;
     }
-    // Mouse clicks here; touch taps arrive through the director (Frame.tap), after a drag they are dropped.
-    if (!dragged && e.type === "pointerup" && e.pointerType === "mouse") select(pick(e.clientX, e.clientY));
+    // Mouse clicks here (a pin-layout ring drag moves too far to count); touch taps arrive through the director (Frame.tap), after a drag they are dropped.
+    if (!dragged && e.type === "pointerup" && e.pointerType === "mouse" && Math.hypot(e.clientX - x0, e.clientY - y0) < 8) select(pick(e.clientX, e.clientY));
     ctx.request();
   };
   stage.addEventListener("pointerup", up, { signal });
@@ -171,7 +197,6 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     unPose?.();
     unPose = null;
     stage.querySelectorAll<HTMLElement>(".wk__hit, .wk__world").forEach((el) => delete el.dataset["cursor"]);
-    stage.querySelectorAll<HTMLElement>(hitSel()).forEach((el) => (el.dataset["cursor"] = UI.cursor.show));
     if (!pin()) return;
     const h = (hooked = new AbortController());
     void registry.whenReady("ring", AbortSignal.any([signal, h.signal])).then((r) => {
@@ -199,10 +224,32 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
   function stepTween(now: number) {
     if (!S.tw) return false;
     const t = clamp((now - S.tw.t0) / S.tw.dur);
-    const e = S.tw.stepped ? (t >= 1 ? 1 : Math.floor(t * 4) / 4) : outExpo(t);
-    S.manual = S.tw.from + (S.tw.to - S.tw.from) * e;
+    S.manual = S.tw.from + (S.tw.to - S.tw.from) * (t >= 1 ? 1 : Math.floor(t * 4) / 4);
     if (t >= 1) { S.manual = S.tw.to; S.tw = null; return false; }
     return true;
+  }
+  function stepSpring(dt: number) {
+    const sp = S.sp;
+    if (!sp) return false;
+    const on = spring(sp, sp.to, dt);
+    S.manual = sp.x;
+    if (!on) S.sp = null;
+    return on;
+  }
+  /** Back to project 0 once per departure, while the plates are folded flat so the turn is hidden. */
+  function reset() {
+    if (pin()) {
+      // shortcut: goTo's reveal() calls scroll.scrollTo synchronously, which would scroll the page back; swap it for a no-op
+      // around the call. A no-scroll goTo option in Work.tsx would replace this if the fast-path budget allows.
+      const r = registry.get("ring"), sc = registry.get("scroll");
+      if (!r || r.active() === 0) return;
+      const keep = sc?.scrollTo;
+      try { if (sc) sc.scrollTo = () => Promise.resolve(); r.goTo(0, { immediate: true }); } finally { if (sc && keep) sc.scrollTo = keep; }
+      return;
+    }
+    const c = Math.round(S.manual), m = mod(c, N);
+    S.manual = c - m + (m > N / 2 ? N : 0);
+    S.tw = S.sp = null;
   }
 
   /** Approach: the plates lie as a stack on the table, then rise onto the drum as Work arrives. */
@@ -246,11 +293,19 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
   }
 
   function frame(dt: number, now: number, f: Frame): boolean {
-    if (f.w <= 0) return false;
+    // A page jump can skip straight to w=0, so the departure reset must also run here.
+    if (f.w <= 0) { if (!S.gone && !S.press && !S.drag && !boardOpen() && !store.get().pinDragging) { S.gone = true; reset(); } label(null, ""); cue.step(now, f, 0); return false; }
     const a = (S.a = approach());
-    shadow.material.opacity = 1 - smooth(a); // the stack's contact shadow leaves with the plates
+    // Leaving for the next station the plates fold back into the stack they arrived as (a pure function of scroll, af = 0 is the arrival pose).
+    let wf = ctx.reduced ? (f.w >= 0.5 ? 1 : 0) : smooth(clamp((f.w - M.fold.end) / (M.fold.start - M.fold.end)));
+    if (ctx.stepped) wf = Math.round(wf * 8) / 8;
+    const af = a * wf;
+    shadow.material.opacity = 1 - smooth(af); // the stack's contact shadow leaves with the plates
+    if (f.w >= M.fold.start) S.gone = false;
+    else if (f.w < M.fold.end && a >= 1 && !S.gone && !S.press && !S.drag && !boardOpen() && !store.get().pinDragging) { S.gone = true; reset(); }
     if (f.tap && f.focus && !boardOpen() && now - S.dragEnd > 120) select(pick(f.tap.x, f.tap.y));
     let busy = stepTween(now);
+    if (stepSpring(dt)) busy = true;
     if (stepGlide(now)) busy = true;
 
     // Drum offset: the ring in the pin layout, manual turns in the stack.
@@ -260,22 +315,28 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     if (ctx.stepped) o = Math.round(o * 4) / 4;
     const act = mod(Math.round(o), N);
 
-    // Hover: only the front plate answers; it lifts and tilts toward the pointer. Touch never tilts.
-    let hoverHit = false;
-    if (f.focus && f.over && a >= 1 && f.px >= 0 && !ctx.reduced && !boardOpen()) {
+    // Hover: the nearest plate under the pointer names the cursor (SHOW on the front one, NEXT or PREVIOUS on a neighbour, the
+    // shorter turn). The front plate also lifts and tilts toward the pointer, a neighbour lifts a little. Touch never tilts.
+    const pressing = S.press || S.drag || store.get().pinDragging;
+    let hoverHit = false, hk = -1;
+    if (f.focus && f.over && a >= 1 && f.px >= 0 && !boardOpen()) {
       ndc.set((f.px / innerWidth) * 2 - 1, -(f.py / innerHeight) * 2 + 1);
       ray.setFromCamera(ndc, camera);
-      const hit = ray.intersectObject(plates[act]!, false)[0];
-      if (hit?.uv && hit.face && hit.face.normal.z > 0.5) { hoverHit = true; S.hu = hit.uv.x; S.hv = hit.uv.y; }
+      const hit = ray.intersectObjects(plates, false)[0];
+      if (hit) hk = plates.findIndex((p) => p === hit.object);
+      if (hk === act && !ctx.reduced && hit?.uv && hit.face && hit.face.normal.z > 0.5) { hoverHit = true; S.hu = hit.uv.x; S.hv = hit.uv.y; }
     }
-    const pressing = S.press || S.drag || store.get().pinDragging;
+    if (pressing) hk = -1;
+    S.hov = hk === act ? -1 : hk;
+    const d0 = mod(hk - act, N), hel = stage.querySelector<HTMLElement>(hitSel());
+    label(hel, hk < 0 ? "" : d0 === 0 ? UI.cursor.show : d0 <= N / 2 ? "NEXT" : "PREVIOUS");
     const liveState = (pressing || hoverHit) && a >= 1;
     const kk = 1 - Math.exp(-dt * 14);
     plates.forEach((_, k) => {
       const l = S.live[k]!;
       const on = k === act && !ctx.reduced;
       const goal = {
-        lift: on && pressing ? M.press : on && hoverHit ? M.lift : 0,
+        lift: on && pressing ? M.press : on && hoverHit ? M.lift : k === S.hov && !ctx.reduced ? M.peek : 0,
         tx: on && hoverHit ? (S.hu - 0.5) * 2 * M.tilt : 0,
         ty: on && hoverHit ? -(S.hv - 0.5) * 2 * M.tilt : 0,
       };
@@ -289,7 +350,7 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     plates.forEach((m, k) => {
       const l = S.live[k]!;
       const d = mod(k - act, N); // 0 is the top of the stack and the front of the drum
-      let t = smooth(clamp((a - 0.07 * d) / 0.62));
+      let t = smooth(clamp((af - 0.07 * d) / 0.62));
       if (ctx.stepped && t > 0 && t < 1) t = Math.round(t * 8) / 8;
       const far = Math.min(1, Math.abs(mod(k - o + N / 2, N) - N / 2)); // 0 at the front, 1 from one row away
       drumPose(k, o, l.lift - SINK * far, m.position, m.quaternion);
@@ -315,6 +376,7 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     spine.visible = liveState;
     spine.position.set(-PW / 2 - 0.018, 0, 0.004).applyQuaternion(front.quaternion).add(front.position);
     spine.quaternion.copy(front.quaternion);
+    if (cue.step(now, f, smooth(clamp((af - 0.5) / 0.5)))) busy = true;
     return busy;
   }
 
@@ -337,6 +399,7 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
       unPose?.();
       unsubs.forEach((u) => u());
       stage.querySelectorAll<HTMLElement>(".wk__hit, .wk__world").forEach((el) => delete el.dataset["cursor"]);
+      cue.dispose();
       scene.remove(...plates, spine, shadow, ...levels);
       K.dispose();
     },

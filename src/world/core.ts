@@ -20,7 +20,12 @@ export const TIERS = {
 export interface Rest { look: Vector3; dir: Vector3; dist: number; half: number; wide: number; light: Vector3; pool: number; full?: boolean }
 export interface Box { x: number; y: number; w: number; h: number }
 /** What a station gets each frame: w is its presence (1 at rest, 0 a whole transit away), focus is true at rest. */
-export interface Frame { w: number; focus: boolean; px: number; py: number; over: boolean; tap: null | { x: number; y: number }; vw: number; vh: number }
+export interface Frame {
+  w: number; focus: boolean; px: number; py: number; over: boolean; tap: null | { x: number; y: number };
+  /** A press and release in place over the world, any pointer (tap is touch only and work.ts owns it). */
+  click: null | { x: number; y: number };
+  vw: number; vh: number;
+}
 
 export interface Station {
   readonly rest: Rest;
@@ -45,6 +50,8 @@ export interface Ctx {
   /** A click-focus offset on top of the scroll pose: k 0..1 dollies the camera in about 20 percent and aims it k/2 of the
    *  way to `at` (world point). work.ts owns k; the scroll pose underneath is untouched. */
   readonly focus: { k: number; at: Vector3 };
+  /** Darkroom, 0..1: dims the key and the fill (sign.ts owns it; its desk lamp takes over). */
+  dark: number;
   request(): void;
 }
 
@@ -138,19 +145,21 @@ export function createWorld(o: { tier: Tier; mode: Mode; reduced: boolean; onFai
   let raf = 0, last = 0, frames = 0, on = false, inBand = false, lost = false, dead = false, cleared = true;
   let W = 1, H = 1, navH = 56, bake = 0, moved = false, jump = false, lastC = NaN, warmed = false;
   let lostTimer = 0;
-  const ptr = { x: -1, y: -1, over: false, t: 0, tap: null as null | { x: number; y: number } };
+  const ptr = { x: -1, y: -1, over: false, t: 0, tap: null as null | { x: number; y: number }, click: null as null | { x: number; y: number }, dx: 0, dy: 0 };
+  const LIT = { hemi: 0.35, key: 2.6 }; // the mode's own intensities (applyMode); ctx.dark scales them
   const orbit = { yaw: 0, pitch: 0 };
 
   const ctx: Ctx = {
     scene, camera, renderer, tier: o.tier, mode: o.mode, reduced: o.reduced,
     get stepped() { return ctx.mode === "raster" && !ctx.reduced; },
     focus: { k: 0, at: new Vector3() },
+    dark: 0,
     request,
   };
   const tgt: Target = { look: new Vector3(), dir: new Vector3(0, 0, 1), dist: 8, half: 1, wide: 1, light: new Vector3(0, 0, 1), pool: 3 };
   const cur = { pos: new Vector3(), look: new Vector3(), fov: 30, pool: 3, light: new Vector3(0, 0, 1), init: false };
   const v = { pos: new Vector3(), a: new Vector3(), b: new Vector3(), box: { x: 0, y: 0, w: 1, h: 1 } as Box };
-  const fr: Frame = { w: 0, focus: false, px: -1, py: -1, over: false, tap: null, vw: 1, vh: 1 };
+  const fr: Frame = { w: 0, focus: false, px: -1, py: -1, over: false, tap: null, click: null, vw: 1, vh: 1 };
   const tr: Transit = { u: 0, i0: 0, t: 0, uq: 0, c: 0 };
   let panels: (HTMLElement | null)[] = [];
   let panelW: string[] = [];
@@ -316,8 +325,8 @@ export function createWorld(o: { tier: Tier; mode: Mode; reduced: boolean; onFai
     camera.position.copy(cur.pos);
     camera.lookAt(cur.look);
     camera.updateMatrixWorld();
-    fr.px = ptr.x; fr.py = ptr.y; fr.over = ptr.over; fr.tap = ptr.tap; fr.vw = W; fr.vh = H;
-    ptr.tap = null;
+    fr.px = ptr.x; fr.py = ptr.y; fr.over = ptr.over; fr.tap = ptr.tap; fr.click = ptr.click; fr.vw = W; fr.vh = H;
+    ptr.tap = ptr.click = null;
     stations.forEach((s, j) => {
       fr.w = 1 - Math.min(1, Math.abs(uq - j));
       fr.focus = focus && Math.round(uq) === j;
@@ -329,6 +338,8 @@ export function createWorld(o: { tier: Tier; mode: Mode; reduced: boolean; onFai
     key.target.position.set(cur.look.x, cur.look.y, 0);
     key.position.copy(key.target.position).addScaledVector(lightDir, LIGHT_D);
     key.angle = Math.atan(cur.pool / LIGHT_D) * 1.25;
+    hemi.intensity = LIT.hemi * (1 - 0.9 * ctx.dark);
+    key.intensity = LIT.key * (1 - 0.93 * ctx.dark);
     if (!renderer.shadowMap.autoUpdate && (busy || moved) && now - bake > 150) { renderer.shadowMap.needsUpdate = true; bake = now; moved = busy; }
 
     if (ctx.mode === "raster" && !pass) {
@@ -375,8 +386,8 @@ export function createWorld(o: { tier: Tier; mode: Mode; reduced: boolean; onFai
     key.shadow.mapSize.set(s, s);
     key.shadow.map?.dispose();
     key.shadow.map = null;
-    hemi.intensity = raster ? 0 : 0.35;
-    key.intensity = raster ? 3.4 : 2.6;
+    LIT.hemi = raster ? 0 : 0.35;
+    LIT.key = raster ? 3.4 : 2.6;
     key.penumbra = raster ? 0.6 : 0.85;
     groundM.color.set(raster ? 0x2c2a26 : 0x3b3731);
     for (const st of stations) st.setMode(ctx.mode);
@@ -412,9 +423,11 @@ export function createWorld(o: { tier: Tier; mode: Mode; reduced: boolean; onFai
     ptr.x = e.clientX; ptr.y = e.clientY; ptr.over = overWorld(e.target); ptr.t = performance.now();
     request();
   }, { passive: true, signal });
+  addEventListener("pointerdown", (e) => { ptr.dx = e.clientX; ptr.dy = e.clientY; }, { passive: true, signal });
   addEventListener("pointerup", (e) => {
-    if (e.pointerType === "mouse" || !overWorld(e.target)) return;
-    ptr.tap = { x: e.clientX, y: e.clientY }; // touch: tap selects, no tilt
+    if (!overWorld(e.target)) return;
+    if (Math.hypot(e.clientX - ptr.dx, e.clientY - ptr.dy) < 8) ptr.click = { x: e.clientX, y: e.clientY };
+    if (e.pointerType !== "mouse") ptr.tap = { x: e.clientX, y: e.clientY }; // touch: tap selects, no tilt
     request();
   }, { passive: true, signal });
   document.addEventListener("visibilitychange", update, { signal });
