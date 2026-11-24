@@ -6,16 +6,15 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#EBE7DD" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#080807" media="(prefers-color-scheme: dark)" />
-    <style>div.intro{display:none}.rr-intro,.rr-intro div.intro{background:#EBE7DD}.rr-intro[data-mode=raster],.rr-intro[data-mode=raster] div.intro{background:#080807}.rr-intro div.intro{position:fixed;inset:0;z-index:100;display:flex}.rr-intro:not(.rr-intro-live) div.intro>*{visibility:hidden}html.veil::after{content:"";position:fixed;inset:0;z-index:999;background:#EBE7DD;transition:opacity .2s;animation:rr-veil 1ms 4s forwards}html.veil[data-mode=raster]::after{background:#080807}html.veil-off::after{opacity:0;pointer-events:none}html.calm.veil-off::after{transition:none}@keyframes rr-veil{to{visibility:hidden}}</style>
+    <style>div.intro{display:none}.rr-intro,.rr-intro div.intro{background:#EBE7DD}.rr-intro[data-mode=raster],.rr-intro[data-mode=raster] div.intro{background:#080807}.rr-intro div.intro{position:fixed;inset:0;z-index:100;display:flex}.rr-intro:not(.rr-intro-live) div.intro>*{visibility:hidden}html.veil::after{content:"";position:fixed;inset:0;z-index:999;background:#EBE7DD;transition:opacity .4s;animation:rr-veil 1ms 4s forwards}html.veil[data-mode=raster]::after{background:#080807}html.veil-off::after{opacity:0;pointer-events:none}html.calm.veil-off::after{transition:none}@keyframes rr-veil{to{visibility:hidden}}</style>
 
-    <script id="rr-prepaint">(function(){var d=document.documentElement,c=d.classList,m,p,s;
-try{m=localStorage.getItem("rr-mode");p=localStorage.getItem("rr-motion");s=sessionStorage.getItem("rr-entered");if(m==="light")m="render";else if(m==="dark")m="raster";}catch(e){}
+    <script id="rr-prepaint">(function(){var d=document.documentElement,c=d.classList,m,s;
+try{m=localStorage.getItem("rr-mode");s=sessionStorage.getItem("rr-entered");if(m==="light")m="render";else if(m==="dark")m="raster";}catch(e){}
 var sys=matchMedia("(prefers-color-scheme: dark)").matches?"raster":"render",k=m==="render"||m==="raster";
 d.dataset.mode=k?m:sys;c.add("js");
 var plain=location.pathname.replace(/\/+$/,"")==="/index";
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
-var calm=p?p==="reduced":reduce;
-if(calm)c.add("calm");else if(!plain)c.add("enhanced");
+if(reduce)c.add("calm");else if(!plain)c.add("enhanced");
 if(!plain&&(!s||/[?&]intro=1/.test(location.search))){c.add("rr-intro");history.scrollRestoration="manual";history.replaceState(null,"",location.pathname+location.search);scrollTo(0,0)}else if(!plain)c.add("veil");
 setTimeout(function(){c.contains("booted")||c.add("rr-boot-timeout")},2600);})();</script>
     <meta name="description" content="Mohammed Parvez, Creator &amp; Developer based in Dhaka, Bangladesh. B.Sc. CSE, final semester, Daffodil International University. President, AR/VR &amp; Game Development Lab." />

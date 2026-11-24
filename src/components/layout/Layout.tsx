@@ -3,7 +3,7 @@ import { m } from "motion/react";
 import { SECTIONS, SITE, UI } from "../../lib/site";
 import { duration, ease, useReducedMotion } from "../../motion/config";
 import { registry } from "../../rr/registry.ts";
-import { reduceMotion, store, useRRStore } from "../../rr/store.ts";
+import { store, useRRStore } from "../../rr/store.ts";
 import "../../styles/nav.css";
 import { navProgress } from "./navProgress.ts";
 
@@ -48,7 +48,7 @@ function Header() {
   useEffect(() => {
     const el = head.current!;
     const q = <T extends HTMLElement>(s: string) => el.querySelector<T>(s)!;
-    let raf = 0, prev = "";
+    let raf = 0, prev = "", py = scrollY, acc = 0;
     // How far PARVEZ slides to sit one space after "M.": the hidden letters less the dot (unscaled layout, transforms ignored).
     const measure = () => { el.style.setProperty("--nv-d", String(q(".nv__o").offsetWidth - q(".nv__dot").offsetWidth)); };
     const update = () => {
@@ -61,6 +61,10 @@ function Header() {
         el.dataset["c"] = v === "1" ? "1" : "0";
       }
       const f = document.querySelector(".ftr-name");
+      const d = scrollY - py;
+      py = scrollY;
+      acc = d * acc > 0 ? acc + d : d; // same direction sums, a reversal restarts
+      el.toggleAttribute("data-hide", scrollY < vh * 0.6 || menu.current?.open || el.matches(":focus-within") || acc <= -4 ? false : acc >= 8 || el.hasAttribute("data-hide"));
       el.toggleAttribute("data-end", !!f && f.getBoundingClientRect().top < vh * 0.9);
     };
     const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
@@ -68,6 +72,9 @@ function Header() {
     const ac = new AbortController(), opt = { passive: true, signal: ac.signal };
     addEventListener("scroll", queue, opt);
     addEventListener("resize", resize, opt);
+    el.addEventListener("focusin", queue, { signal: ac.signal });
+    el.addEventListener("focusout", queue, { signal: ac.signal });
+    menu.current!.addEventListener("close", queue, { signal: ac.signal });
     document.fonts.addEventListener("loadingdone", measure, { signal: ac.signal });
     const offs = [store.subscribe("mode", resize), store.subscribe("motion", queue)];
     resize();
@@ -76,8 +83,6 @@ function Header() {
 
   const keys = (
     <div className="nv__ctl">
-      <ModeSwitch />
-      <MotionToggle />
       <SoundToggle />
     </div>
   );
@@ -144,29 +149,6 @@ function Header() {
 }
 
 /** Render / Raster switch: one radial cell wave from the button in the new mode's paper. */
-/** The visitor's motion choice, stored (try/catch) for the prepaint script. Reduced applies at once through the store,
- *  which the world, cursor and boot already follow; Full applies on the next load and says so. */
-function MotionToggle() {
-  const live = useRRStore((s) => s.motion) === "full";
-  const [full, setFull] = useState(live);
-  const toggle = () => {
-    const next = !full;
-    try { localStorage.setItem("rr-motion", next ? "full" : "reduced"); } catch { /* the choice lasts this page only */ }
-    if (!next) reduceMotion();
-    setFull(next);
-  };
-  const [key, value] = (full ? UI.motion.full : UI.motion.reduced).split(": ");
-  return (
-    <>
-      <button type="button" className="mtog nv__k" aria-pressed={full} data-sfx="key" onClick={toggle}>
-        {key}
-        <span className="nv__v">{value}</span>
-      </button>
-      <span role="status" className="sr-only">{full && !live ? UI.motion.next : ""}</span>
-    </>
-  );
-}
-
 function ModeSwitch() {
   const raster = useRRStore((s) => s.mode) === "raster";
 
@@ -182,7 +164,7 @@ function ModeSwitch() {
         await wipe.transition(swap, {
           origin: { x: r.left + r.width / 2, y: r.top + r.height / 2 },
           color: next === "raster" ? "#080807" : "#EBE7DD", // the new mode's --paper, read before it applies
-          dur: 360,
+          dur: 560,
         });
       } else swap();
     } finally {
@@ -192,7 +174,7 @@ function ModeSwitch() {
   };
 
   return (
-    <button type="button" className="mode nv__k" aria-pressed={raster} aria-label={UI.mode.name} data-sfx="mode" onClick={toggle}>
+    <button type="button" className="mode mchip" aria-pressed={raster} aria-label={UI.mode.name} data-sfx="mode" onClick={toggle}>
       <span className="mode__opt mode__opt--render">{UI.mode.render}</span>
       <span aria-hidden="true">/</span>
       <span className="mode__opt mode__opt--raster">{UI.mode.raster}</span>
@@ -221,10 +203,6 @@ function Footer() {
           {SITE.name}, {YEAR}
         </p>
         <p>Set in Newsreader, Instrument Sans, Bodoni Moda, Doto, Jersey 25, JetBrains Mono and Caveat</p>
-        {/* #top goes through the router in rr/scroll.ts (Lenis glide, then focus on the hero). */}
-        <a className="link tap ftr-top" href="#top">
-          {UI.contact.top}
-        </a>
       </div>
     </footer>
   );
@@ -244,6 +222,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Footer />
+      <ModeSwitch />
       <m.div
         className="grain"
         aria-hidden="true"

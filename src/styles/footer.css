@@ -85,8 +85,6 @@
   background: var(--paper);
   border-top: 1px solid var(--rule);
 }
-.ftr-top { margin-left: auto; color: var(--ink); text-decoration-color: var(--mute); }
-.ftr-top:hover { text-decoration-color: var(--signal); }
 
 /* ---- Contact: Ask, Dock, Answer ----
    One frame holds the stage and the contact layer. Phones and short screens stack them (no pin). From 900 px (and 620 px of

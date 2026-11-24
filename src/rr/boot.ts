@@ -1,13 +1,13 @@
 import { eligible } from "../world/eligible.ts";
 import type { Handle, Registry } from "./registry.ts";
+import { heroReady } from "./ready.ts";
 import { store } from "./store.ts";
 
 export type BootHandle = Handle;
 
-const FONT_RACE = 1400; // ms
-const DEADLINE = 2600;  // ms from navigation start
+const DEADLINE = 2600; // ms from navigation start (heroReady races the same cap)
 
-/** Boot core: font race and Engine readiness (or the deadline), then the intro's end, then `booted`, which starts the hero
+/** Boot core: heroReady (fonts, Engine, Hero, portrait; or the deadline), then the intro's end, then `booted`, which starts the hero
  *  entrance and the signature. Never awaits Plates or Bench. */
 export async function create(o: { signal: AbortSignal; registry: Registry }): Promise<BootHandle> {
   const life = new AbortController();
@@ -20,7 +20,7 @@ export async function create(o: { signal: AbortSignal; registry: Registry }): Pr
     if (signal.aborted || store.get().booted) return;
     html.classList.add("booted");
     // The cover from index.html (html.veil, every load but the intro path) lifts with a short fade, then goes.
-    if (html.classList.contains("veil")) { html.classList.add("veil-off"); setTimeout(() => html.classList.remove("veil", "veil-off"), 300); }
+    if (html.classList.contains("veil")) { html.classList.add("veil-off"); setTimeout(() => html.classList.remove("veil", "veil-off"), 500); }
     store.set({ booted: true });
   };
   const handle: BootHandle = {
@@ -32,9 +32,9 @@ export async function create(o: { signal: AbortSignal; registry: Registry }): Pr
     },
   };
 
-  // The intro (src/intro/intro.ts) is done when html.rr-intro goes (main.tsx also drops it if the chunk fails to load).
+  // The intro (src/intro/intro.ts) is gone when its sheet starts fading (rr-intro-out) or html.rr-intro goes (main.tsx also drops it if the chunk fails to load).
   const introGone = new Promise<void>((r) => {
-    const ok = () => !html.classList.contains("rr-intro");
+    const ok = () => !html.classList.contains("rr-intro") || html.classList.contains("rr-intro-out");
     if (ok()) return r();
     const mo = new MutationObserver(() => { if (ok()) { mo.disconnect(); r(); } });
     mo.observe(html, { attributeFilter: ["class"] });
@@ -46,12 +46,9 @@ export async function create(o: { signal: AbortSignal; registry: Registry }): Pr
   void (async () => {
     let timedOut = false;
     const deadline = later(DEADLINE - performance.now()).then(() => { timedOut = true; });
-    const race = <T>(p: Promise<T>) => Promise.race([p.then(() => {}, () => {}), deadline]);
     try {
-      await Promise.all([
-        race(Promise.race([document.fonts.ready, later(FONT_RACE)])),
-        race(o.registry.whenReady("engine", signal)),
-      ]);
+      await Promise.race([heroReady(o.registry, signal), deadline]);
+      if (performance.now() >= DEADLINE) timedOut = true; // heroReady's own cap can win the race by a tick
       await introGone;
     } catch (err) {
       console.warn("[rr] boot", err);

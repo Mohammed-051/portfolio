@@ -59,18 +59,20 @@ void main(){
     if(uPorOn>.5){
       vec2 pp=p-vec2(uPorB.x,uPorB.y-uScroll),q=pp/uPorB.zw;
       if(q.x>=0.&&q.y>=0.&&q.x<1.&&q.y<1.){
-        if(max(max(uMode,inL),step(.15,uDerez))<.5){
+        float rn=1.-max(uMode,inL),k=rn*smoothstep(.12,.55,uDerez); // Render: ink crossfades into cells, no hard switch
+        if(rn>.5&&uDerez<.55){
           float v=texture2D(uPin,q).r,t=1.1-1.2*uPorI;
-          o=ov(o,uPaper,smoothstep(.03,.09,v)*uPorI); // opaque paper under the subject hides the signature
-          o=ov(o,mix(uInk,uSig,step(.5,texture2D(uPor,q).b)),v*smoothstep(t-.15,t,v));
-        }else if(uField*uMode*(1.-inL)<.5){ // Raster blocks come from rr/field.ts once ready; the lens keeps these cells
+          o=ov(o,uPaper,smoothstep(.03,.09,v)*uPorI*(1.-k)); // opaque paper under the subject hides the signature
+          o=ov(o,mix(uInk,uSig,step(.5,texture2D(uPor,q).b)),v*smoothstep(t-.15,t,v)*(1.-k));
+        }
+        if((rn<.5||k>0.)&&uField*uMode*(1.-inL)<.5){ // Raster blocks come from rr/field.ts once ready; the lens keeps these cells
           float c=floor(clamp(uPorB.z/64.,4.,9.)+.5);
           vec2 id=floor(pp/c),f=pp-id*c;
           vec3 dt=texture2D(uPor,(id+.5)*c/uPorB.zw).rgb;
           float v=uMode>.5?dt.r:dt.g;
           float lv=floor(clamp(v*3.+b4(id)*.98,0.,3.));
-          float on=step(.5,lv)*step(h21(id)*.7+q.y*.3,uPorI*1.02)*step(uDerez*1.1,h21(id+3.));
-          on*=step(f.x,c-1.)*step(f.y,c-1.);
+          float on=step(.5,lv)*step(h21(id)*.7+q.y*.3,uPorI*1.02)*step(mix(smoothstep(.3,1.,uDerez)*1.05,uDerez*1.1,uMode),h21(id+3.));
+          on*=step(f.x,c-1.)*step(f.y,c-1.)*mix(1.,k,rn);
           vec3 pc=lv<1.5?uRule:lv<2.5?uMute:uInk;
           o=ov(o,mix(pc,uSig,step(.5,dt.b)),on);
         }
@@ -80,7 +82,7 @@ void main(){
     vec2 hp=p-vec2(uHero.x,uHero.y-uScroll);
     if(uTexOn>.5&&hp.x>=0.&&hp.y>=0.&&hp.x<uHero.z&&hp.y<uHero.w){
       float c=mix(48.,1.,uIntro);
-      c=max(c,1.+uDerez*34.);
+      c=max(c,1.+pow(uDerez,1.6)*34.);
       c=max(c,rast*clamp(uHero.w/37.,3.,7.));
       c=floor(c+.5);
       if(c<1.5){
@@ -370,7 +372,7 @@ export async function create(o: { signal: AbortSignal; host: HTMLElement; lines:
     upPortrait();
     // On failure the shader keeps its own Raster cells and Render ink: the field is an enhancement only.
     return import("./field.ts").then((m) => { if (!signal.aborted) { fieldMod = m; mkField(); } });
-  }).catch(() => {});
+  }).catch(() => { host.classList.add("por-fail"); });
 
   const rmTick = addTicker(gsap, draw);
   const io = typeof IntersectionObserver === "function" ? new IntersectionObserver(([e]) => { visible = e?.isIntersecting ?? true; }) : null;
@@ -389,7 +391,7 @@ export async function create(o: { signal: AbortSignal; host: HTMLElement; lines:
     }),
     store.subscribe("fontGen", () => buildTexture(...args)),
   ];
-  cv.addEventListener("webglcontextlost", (e) => { e.preventDefault(); ok = false; host.classList.remove("gl-ok", "por-ok"); }, { signal });
+  cv.addEventListener("webglcontextlost", (e) => { e.preventDefault(); ok = false; host.classList.remove("gl-ok", "por-ok", "por-fail"); }, { signal });
   cv.addEventListener("webglcontextrestored", () => { ok = setup(); resize(); buildTexture(...args); }, { signal });
 
   return {
@@ -408,7 +410,7 @@ export async function create(o: { signal: AbortSignal; host: HTMLElement; lines:
       ro.disconnect();
       clearTimeout(rt);
       for (const f of unsub) f();
-      host.classList.remove("gl-ok", "por-ok");
+      host.classList.remove("gl-ok", "por-ok", "por-fail");
       imgP = imgI = null;
       field?.destroy();
       field = null;

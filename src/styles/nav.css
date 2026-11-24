@@ -10,8 +10,10 @@ html::-webkit-scrollbar { display: none; }
   --nv: 0; --nv-d: 0; --nv-F: 26; /* name size at the top, px; compact text is 16 px */
   --nv-k: calc(16 / var(--nv-F)); --nv-dy: calc(var(--nv-F) * 0.5px - 8px);
   position: fixed; inset: 0 0 auto 0; z-index: 40; display: flex; justify-content: flex-end; align-items: center; gap: 24px;
-  height: 44px; padding-inline: var(--g); color: var(--color-bone-100); background: none; box-shadow: none; translate: none; transition: none;
+  height: 44px; padding-inline: var(--g); color: var(--color-bone-100); background: none; box-shadow: none; translate: none; transition: translate 520ms cubic-bezier(.22, 1, .36, 1);
 }
+.nv[data-hide] { translate: 0 -140%; }
+:root[data-mode="raster"] .nv { transition: translate 320ms steps(4); }
 @media (min-width: 768px) { .nv { --nv-F: 34; } }
 @media (min-width: 1280px) { .nv { --nv-F: 44; } }
 :root[data-mode="raster"] .nv { --nv-k: calc(18 / var(--nv-F)); }
@@ -78,7 +80,6 @@ html.calm .nv[data-c="1"] .nv__name { animation: nv-x1 150ms linear !important; 
 .nv .nv__k:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; color: var(--color-bone-100); }
 .nv .nv__k:active { translate: 0 1px; }
 .nv__v { color: var(--color-bone-500); }
-.nv .mode .mode__opt { display: inline; transition: none; } /* both names at every width (app.css hid one under 768) */
 @media (hover: hover) {
   .nv .nv__k:hover { color: var(--color-bone-100); }
   .nv .nv__k:hover::before { transform: none; }
@@ -88,7 +89,7 @@ html.calm .nv[data-c="1"] .nv__name { animation: nv-x1 150ms linear !important; 
 :root[data-mode="raster"] .nv .nv__k[aria-current="true"] { background: var(--color-bone-100); color: var(--color-ink-950); box-shadow: inset 0 0 0 1px var(--color-ink-950), inset 0 -3px 0 var(--signal); }
 :root[data-mode="raster"] .nv .nv__k:focus-visible { outline-style: dotted; outline-offset: 2px; }
 @media (hover: hover) {
-  :root[data-mode="raster"] .nv .nv__k:hover, :root[data-mode="raster"] .nv .nv__k:hover :is(.nv__v, .mode__opt) { background: var(--color-bone-100); color: var(--color-ink-950); }
+  :root[data-mode="raster"] .nv .nv__k:hover, :root[data-mode="raster"] .nv .nv__k:hover .nv__v { background: var(--color-bone-100); color: var(--color-ink-950); }
 }
 
 /* Under 1024 px the links and keys live in the menu; the bar keeps the name and Menu. */
@@ -101,3 +102,18 @@ html.calm .nv[data-c="1"] .nv__name { animation: nv-x1 150ms linear !important; 
 }
 /* The dialog sits inside the header: undo the dark-table remap (work.css) so its paper and ink match. */
 .menu { --color-bone-100: var(--ink); --color-bone-300: var(--ink-2); --color-bone-500: var(--mute); color: var(--ink); }
+
+/* Render / Raster chip: fixed bottom right, hidden at the footer so it never covers the red period. */
+.mchip {
+  position: fixed; right: var(--g); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 45; display: inline-flex; align-items: center; gap: 0.3em;
+  min-height: 32px; padding: 6px 10px; font: 500 0.75rem/1 var(--font-read); white-space: nowrap; color: var(--mute);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 999px;
+  transition: opacity var(--duration-fast), visibility var(--duration-fast), box-shadow var(--duration-fast);
+}
+.mchip .mode__opt { color: var(--mute); }
+.mchip[aria-pressed="false"] .mode__opt--render, .mchip[aria-pressed="true"] .mode__opt--raster { color: var(--ink); }
+.mchip:hover, .mchip:focus-visible { box-shadow: 0 0 0 2px var(--ink); outline: none; }
+.nv[data-end] ~ .mchip { opacity: 0; visibility: hidden; pointer-events: none; }
+:root[data-mode="raster"] .mchip { border-radius: 0; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; transition: opacity 120ms steps(3), visibility 120ms steps(3); }
+:root[data-mode="raster"] .mchip .mode__opt { padding: 2px 4px; }
+:root[data-mode="raster"] .mchip[aria-pressed="false"] .mode__opt--render, :root[data-mode="raster"] .mchip[aria-pressed="true"] .mode__opt--raster { background: var(--ink); color: var(--paper); }

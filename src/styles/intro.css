@@ -12,15 +12,13 @@ div.intro { display: none; }
 .intro__name { margin: 0; font: var(--name-weight) clamp(1.125rem, 2vw, 1.5rem)/1 var(--font-name); letter-spacing: var(--name-track); transform-origin: 0 50%; }
 .intro__h { margin: 0; font: 500 0.875rem/1 var(--font-read); }
 .intro__snd { pointer-events: auto; padding: 8px 12px; border: 1px solid; background: none; color: inherit; font: 500 0.75rem/1 var(--font-read); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
-.intro__pane { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 20px; padding: 96px clamp(20px, 4vw, 56px) clamp(24px, 5vh, 56px); overflow: hidden; transition: flex-grow 480ms cubic-bezier(0.65, 0, 0.35, 1); }
-/* data-side (intro.ts): the half of the screen the pointer is on, split at the centre line, so the seam never moves under it. */
-.intro__pane:focus-within, [data-side="render"] > [data-m="render"], [data-side="raster"] > [data-m="raster"] { flex-grow: 1.8; }
-[data-side="render"] > [data-m="raster"], [data-side="raster"] > [data-m="render"] { flex-grow: 1; }
+.intro__pane { position: relative; flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 20px; padding: 96px clamp(20px, 4vw, 56px) clamp(24px, 5vh, 56px); overflow: hidden; }
+/* flex-grow is driven by a spring in intro.ts (inline style) from data-side, the half of the screen the pointer is on, or from focus. */
 div.intro :is(.intro__pane, .intro__pane *, .intro__snd) { cursor: pointer; }
 /* Once the Signal Red dot has painted (rr/cursor.ts sets html.has-cur) it stands in for the pointer; coarse pointers never get it. */
 .has-cur div.intro :is(.intro__pane, .intro__pane *, .intro__snd) { cursor: none; }
 .intro__pane[data-m="render"] { background: radial-gradient(120% 80% at 20% 110%, #DDD7C9, #EBE7DD 65%); color: #11110F; font-family: "Newsreader Display", Georgia, serif; }
-.intro__pane[data-m="raster"] { background: #080807 radial-gradient(#2C2A26 1px, transparent 1.5px) 0 0 / 8px 8px; color: #EBE7DD; font-family: "JetBrains Mono Variable", ui-monospace, monospace; transition-timing-function: steps(12); }
+.intro__pane[data-m="raster"] { background: #080807 radial-gradient(#2C2A26 1px, transparent 1.5px) 0 0 / 8px 8px; color: #EBE7DD; font-family: "JetBrains Mono Variable", ui-monospace, monospace; }
 /* Raster's legibility band: a 50% ordered dither, no blur. */
 .intro__pane { isolation: isolate; }
 .intro__pane[data-m="raster"]::before { content: ""; position: absolute; z-index: -1; inset: auto 0 0; height: 45%; background: conic-gradient(#080807 25%, transparent 0 50%, #080807 0 75%, transparent 0) 0 0 / 4px 4px; pointer-events: none; }

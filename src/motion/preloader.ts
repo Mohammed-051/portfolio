@@ -82,4 +82,7 @@ export function progress(m: Mode): { p: number; method: "bytes" | "bytes+count";
   return { p: num / den, method: items.every((r) => r.size !== null || r.failed) ? "bytes" : "bytes+count", items: [...keys, "world chunk", GLB].flatMap((k) => recs.get(k) ?? []) };
 }
 
+/** Gate for the counter: the world chunk landed, or this device never loads it. */
+export const tailDone = () => !eligible() || !!recs.get("world chunk")?.done;
+
 export const onProgress = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };

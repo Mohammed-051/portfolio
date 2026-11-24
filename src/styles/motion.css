@@ -1,7 +1,7 @@
 /* DOM motion. Unlayered, so it beats the component layer.
    Render is soft (outExpo), Raster is stepped. Hero and footer keep their own states. */
 
-/* ---- Reduced motion with JS: the prepaint script (OS setting or the visitor's choice) and store.reduceMotion() set html.calm. */
+/* ---- Reduced motion with JS: the prepaint script (OS setting) and the store's OS change listener set html.calm. */
 html.calm *, html.calm ::before, html.calm ::after { transition-duration: 0s !important; animation-duration: 0s !important; scroll-behavior: auto !important; }
 
 /* ---- Cursor. rr/cursor.ts sets data-state. An 8 px dot; a 28 px ring grows round it over links, keys and

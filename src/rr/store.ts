@@ -99,19 +99,12 @@ applyMode(state.mode);
 // With no stored mode, the mode follows the system color scheme live, without persisting.
 dark.addEventListener("change", (e) => { if (!storedMode()) write({ mode: e.matches ? "raster" : "render" }); });
 pinMq.addEventListener("change", () => write({ layout: layoutNow() }));
-/** Reduced motion applies at once (OS reduce-on or the Motion toggle); full returns only on the next load. */
-export function reduceMotion() {
+// Tiers: OS reduce-on applies live; reduce-off waits for the next load.
+matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", (e) => {
+  if (!e.matches) return;
   html.classList.remove("enhanced", "pre");
   html.classList.add("calm");
   write({ motion: "reduced", layout: "stack" });
-}
-const storedMotion = () => {
-  try { return localStorage.getItem("rr-motion"); } catch { return null; }
-};
-// Tiers: reduce-on applies live, unless the visitor chose Full; reduce-off waits for the next load.
-matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", (e) => {
-  if (!e.matches || storedMotion() === "full") return;
-  reduceMotion();
 });
 
 const subscribeAny = (cb: () => void) => { any.add(cb); return () => { any.delete(cb); }; };

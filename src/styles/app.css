@@ -234,13 +234,7 @@
   @keyframes sig-net { to { opacity: 1; } }
 
   /* Render / Raster and Motion, top right in the nav (nav.css), outlined in the bar's own ink so they read on paper and table. */
-  :is(.mode, .mtog) { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; font-family: var(--font-mono); font-size: 0.6875rem; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-bone-100); border: 1px solid color-mix(in srgb, currentColor 30%, transparent); white-space: nowrap; }
-  @media (pointer: coarse) { :is(.mode, .mtog) { height: 44px; } }
-  .mode__opt { color: var(--color-bone-500); transition: color var(--duration-fast); }
-  .mode[aria-pressed="false"] .mode__opt--render, .mode[aria-pressed="true"] .mode__opt--raster { color: var(--color-bone-100); }
-  /* Narrower bars shed the idle mode, then both modes. */
-  @media (max-width: 767px) { .mode[aria-pressed="false"] .mode__opt--raster, .mode[aria-pressed="true"] .mode__opt--render { display: none; } }
-  @media (max-width: 359px) { .mode__opt { display: none; } }
+  /* The Render / Raster chip (.mode.mchip) is styled in nav.css. */
 
   /* ---- Sections ---- */
   .rise { display: block; overflow: clip; padding-top: 0.04em; margin-top: -0.04em; }

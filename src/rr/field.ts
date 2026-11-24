@@ -334,7 +334,7 @@ export function create(gl: WebGLRenderingContext, img: HTMLImageElement, onReady
     }
     focus(f.reduced ? 0 : t);
     // Pass 1: per-pen alpha (inner bands reveal first with por, scroll derez fades) and total visible stroke length in px.
-    const der = 1 - 0.85 * f.derez, nb = NBc + 1.5;
+    const der = 1 - 0.85 * sstep(0.12, 0.55, f.derez), nb = NBc + 1.5;
     let tot = 0;
     for (let i = 0; i < NP; i++) {
       const ph = P.ph[i]!, n = P.n[i]!, j = P.j[i]!, hx = P.x[i]!, hy = P.y[i]!, b = i * H;

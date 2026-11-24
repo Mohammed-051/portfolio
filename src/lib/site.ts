@@ -27,11 +27,10 @@ export const WORK_IDS = ["glitched-server", "climate-controller", "smart-life", 
 
 export const UI = {
   mode: { render: "Render", raster: "Raster", name: "Raster view" },
-  motion: { full: "Motion: Full", reduced: "Motion: Reduced", next: "Full motion from the next page load" },
   rail: { name: "Sections", top: "Index" },
   // drag and view: visual only (the cursor node is aria-hidden).
   cursor: { top: "TOP", menu: "MENU", mode: "SWITCH", go: "GO", show: "SHOW", drag: "Drag", view: "View" },
-  contact: { copy: "Copy", copied: "Copied", top: "Back to top", line: "Email, GitHub, LinkedIn or ArtStation." },
+  contact: { copy: "Copy", copied: "Copied", line: "Email, GitHub, LinkedIn or ArtStation." },
   // world/faces.ts draws this chip on a dummy entry, and Lab.tsx shows it on the row.
   dummy: "Placeholder",
   work: {

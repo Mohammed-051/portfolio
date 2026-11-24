@@ -14,7 +14,7 @@ const SPREAD = [0.22, 0.14, 0.09, 0.05, 0.02, 0];
  * Motion tier. DOM contract: `host` is the hero section; `lines` are the wordmark line elements; descendants with
  * `data-rr-rise` rise on intro (wrap each in an overflow-clipped parent); descendants with `data-rr-parallax="<k>"`
  * move k * innerHeight over the hero's scroll (meta strip: -0.22). An optional `[data-rr-signature]` gets
- * marked drawn on destroy; rr/signature.ts plays it once per session on its own.
+ * marked drawn on destroy; rr/signature.ts plays it on every load on its own.
  */
 export async function create(o: {
   signal: AbortSignal;
@@ -54,7 +54,7 @@ export async function create(o: {
       gsap.to(el, { y: () => innerHeight * k, ease: "none", scrollTrigger: { ...scrub, invalidateOnRefresh: true } });
     }
     // Hero exit: the GL wordmark de-rezzes into cells and the portrait dissolves as it scrolls away.
-    if (u) gsap.to(u, { derez: 1, ease: "none", scrollTrigger: scrub });
+    if (u) gsap.to(u, { derez: 1, ease: "power1.inOut", scrollTrigger: { ...scrub, scrub: 0.6 } });
   }, host);
   refresh.request("layout");
 
@@ -65,8 +65,8 @@ export async function create(o: {
     const raster = store.get().mode === "raster";
     const tl = gsap.timeline();
     if (u) {
-      tl.to(u, { atm: 1, duration: 0.35, ease: "power1.out" }, 0)
-        .to(u, { por: 1, duration: raster ? 0.8 : 1, ease: raster ? "steps(12)" : "power2.out" }, 0.12)
+      tl.to(u, { atm: 1, duration: 0.6, ease: "sine.out" }, 0)
+        .to(u, { por: 1, duration: raster ? 1.2 : 1.6, ease: raster ? "steps(16)" : "power3.out" }, 0.12)
         .to(u, { intro: 1, duration: 1.1, ease: "steps(12)" }, 0.4);
     }
     if (rise.length) tl.to(rise, { yPercent: 0, duration: 0.9, ease: "expo.out", stagger: 0.07 }, 0.55);
