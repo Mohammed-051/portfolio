@@ -4,9 +4,9 @@ import { write } from "../../rr/write.ts";
 import { Lede, Rise, SectionHead } from "./parts";
 
 /* About: six paper sheets on the card, a designer's notebook on a desk. Headings and captions are
-   plain markup, visible at once; only the handwritten lines are written in with the scroll (rr/write.ts). */
+   plain markup, visible at once; only the margin tags are typed in with the scroll (rr/write.ts). */
 
-const LH = 26; // line height of the 22 px hand, in px
+const LH = 20; // line height of the 12 px typed tag (app.css .sh__hand), in px
 
 /** The portrait, both treatments (shown by mode in app.css). The other sheets' drawings live on the 3D desk
  *  (world/about.ts), not here: the card stays text-only. */
@@ -19,14 +19,14 @@ function Portrait() {
   );
 }
 
-/** The handwritten lines, hidden from assistive tech (the sr-only copy is read instead). One mask path per line along
+/** The margin tags, typed in the UI face (app.css .sh__hand), hidden from assistive tech (the sr-only copy is read instead). One mask path per line along
  *  its baseline, which rr/write.ts strokes in with the scroll. The markup ships fully drawn, for reduced motion and
  *  for no script. */
 function Hand({ id, lines }: { id: string; lines: string[] }) {
   const h = lines.length * LH + 6;
   return (
     <>
-      <svg data-ink="" aria-hidden="true" width="100%" height={h} className="sh__hand" fill="currentColor" fontSize="22" fontWeight="500">
+      <svg data-ink="" aria-hidden="true" width="100%" height={h} className="sh__hand" fill="currentColor">
         <mask id={id} maskUnits="userSpaceOnUse" x="-8" y="-8" width="400" height={h + 16}>
           {lines.map((l, k) => (
             <path key={l} d={`M0 ${(k + 1) * LH - 10} H300`} stroke="#fff" strokeWidth={LH + 4} pathLength={1} strokeDasharray="1 1" strokeDashoffset={0} />

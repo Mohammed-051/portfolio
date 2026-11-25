@@ -1,11 +1,12 @@
 // About desk: loose paper sheets and a dark notebook under window light. The window is an invisible occluder between
 // the key and the desk; only its shadow (the light bars) is ever seen. Nothing here is content: the About card is.
-import { BoxGeometry, DoubleSide, Group, Mesh, MeshBasicMaterial, type Object3D, Path, Raycaster, Shape, ShapeGeometry, Vector2, Vector3 } from "three";
+import { BoxGeometry, CanvasTexture, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshDepthMaterial, type Object3D, PlaneGeometry, Raycaster, Vector2, Vector3 } from "three";
 import { SHEETS as INFO } from "../lib/content";
 import { SECTIONS, SITE } from "../lib/site";
 import type { Mode } from "../rr/store.ts";
 import type { Ctx, Frame, Rest, Station } from "./core.ts";
 import { withDesk, type Place } from "./desk.ts";
+import { scribble } from "./doodles.ts";
 import { drawCard } from "./faces.ts";
 import { glb, planar } from "./glb.ts";
 import { kit } from "./kit.ts";
@@ -93,6 +94,8 @@ const INK = { render: "#3D3A34", raster: "#2C2A26" }, PENCIL = "#A8A296";
 // Per sheet: drawing width (of the sheet), centre x, y (of the canvas), turn in degrees. Each sits in the part of its
 // sheet the sheets above and the notebook leave in view at the About rest.
 const LAY: [number, number, number, number][] = [[0.64, 0.36, 0.66, -4], [0.72, 0.44, 0.64, 3], [0.6, 0.38, 0.22, -2], [0.62, 0.62, 0.68, 4], [0.5, 0.56, 0.52, -3]];
+// A tiny ink doodle on sheets 0, 1 and 3: kind, x and y (of the sheet width), in the margin clear of ticks, drawing and heading.
+const DOODLE: ([Parameters<typeof scribble>[1], number, number] | undefined)[] = [["star", 0.83, 0.62], ["spiral", 0.82, 0.32], undefined, ["check", 0.18, 0.6]];
 
 function drawSheet(i: number) {
   return (m: Mode, w: number): HTMLCanvasElement => {
@@ -129,6 +132,8 @@ function drawSheet(i: number) {
     g.lineWidth = (raster ? 3.2 : w * 0.006) / s;
     g.stroke(new Path2D(ART[i]!));
     g.restore();
+    const tiny = DOODLE[i];
+    if (tiny) scribble(g, tiny[0], w * tiny[1], w * tiny[2], w * 0.00125, raster, INK[m]);
     inkSheet(c, m, i);
     return c;
   };
@@ -218,15 +223,39 @@ export function createAboutStation(ctx: Ctx, section: HTMLElement): Station {
   const bookM = K.pair(0x1f1e1b, 0x121210), pageEdge = K.pair(0xdcd6ca, 0x8c877c);
   const ruled = K.face(drawPages, 1024, 384);
 
-  // Window: a 6.4 x 8.4 sash, 2 x 3 panes behind 0.04 mullions, 3.2 units up the light ray, facing the light. It is slid
-  // so the name card's projection sits mid-pane: the bars cross the pile and the notebook, never the name.
-  const FW = 6.4, FH = 8.4, bar = 0.15 /* 0.04 read as pen strokes; at 0.15 the mullions blur into soft shade */, pw = (FW - 3 * bar) / 2, ph = (FH - 4 * bar) / 3;
-  const win = new Shape().moveTo(-FW / 2, -FH / 2).lineTo(FW / 2, -FH / 2).lineTo(FW / 2, FH / 2).lineTo(-FW / 2, FH / 2).closePath();
-  for (let c = 0; c < 2; c++) for (let r = 0; r < 3; r++) {
-    const x = -FW / 2 + bar + c * (pw + bar), y = -FH / 2 + bar + r * (ph + bar);
-    win.holes.push(new Path().moveTo(x, y).lineTo(x, y + ph).lineTo(x + pw, y + ph).lineTo(x + pw, y).closePath());
+  // Window: a 6.4 x 8.4 sash, 2 x 3 panes behind 0.15 mullions (0.04 read as pen strokes; at 0.15 they blur into soft shade),
+  // 3.2 units up the light ray, facing the light. It is slid so the name card's projection sits mid-pane: the bars cross the
+  // pile and the notebook, never the name. The occluder is a plane whose hashed alpha holds only the mullions, feathered to
+  // 0 well inside its edge: a finite sash frame cast a hard rectangle that swept the Zzz decal, and shadow depth is binary
+  // per texel, so the hashed coverage is what PCF averages into a soft falloff.
+  const FW = 6.4, FH = 8.4, bar = 0.15, pw = (FW - 3 * bar) / 2, ph = (FH - 4 * bar) / 3;
+  const PW = 9, PH = 11.8, CW = 256, CH = 336, px = CW / PW; // plane in wu, alpha canvas in px
+  const gc = document.createElement("canvas");
+  gc.width = CW; gc.height = CH;
+  const gg = gc.getContext("2d", { willReadFrequently: true })!;
+  gg.fillStyle = "#000"; gg.fillRect(0, 0, CW, CH);
+  gg.fillStyle = "#fff";
+  /** A bar from (x0, y0) to (x1, y1) in wu from the plane centre, its ends tapered to a point over 0.7 wu. */
+  const mull = (x0: number, y0: number, x1: number, y1: number) => {
+    const L = Math.hypot(x1 - x0, y1 - y0), t = 0.7 / L, nx = ((-(y1 - y0) / L) * bar) / 2, ny = (((x1 - x0) / L) * bar) / 2;
+    const at = (f: number, k: number) => [CW / 2 + (x0 + (x1 - x0) * f + nx * k) * px, CH / 2 + (y0 + (y1 - y0) * f + ny * k) * px] as const;
+    gg.beginPath();
+    for (const [f, k] of [[0, 0], [t, 1], [1 - t, 1], [1, 0], [1 - t, -1], [t, -1]] as const) gg.lineTo(...at(f, k));
+    gg.fill();
+  };
+  mull(0, -FH / 2, 0, FH / 2);
+  for (const y of [-(ph + bar) / 2, (ph + bar) / 2]) mull(-FW / 2, y, FW / 2, y);
+  const gd = gg.getImageData(0, 0, CW, CH); // full strength inside r 0.58 of the plane's half-size, 0 from r 0.9
+  for (let i = 0; i < CW * CH; i++) {
+    const r = Math.hypot((((i % CW) + 0.5) / CW) * 2 - 1, ((Math.floor(i / CW) + 0.5) / CH) * 2 - 1), q = Math.min(1, Math.max(0, (r - 0.58) / 0.32)), f = 1 - q * q * (3 - 2 * q);
+    for (let k = 0; k < 3; k++) gd.data[i * 4 + k] = gd.data[i * 4 + k]! * f;
   }
-  const occluder = new Mesh(K.keep(new ShapeGeometry(win)), K.keep(new MeshBasicMaterial({ colorWrite: false, depthWrite: false, side: DoubleSide })));
+  if (import.meta.env.DEV) console.assert(gd.data[1] === 0 && gd.data[((CH / 2) * CW + CW / 2) * 4 + 1]! > 250, "about gobo: corner must be clear, centre cross solid");
+  gg.putImageData(gd, 0, 0);
+  const alphaMap = K.keep(new CanvasTexture(gc)); // linear: a data map, not a colour
+  const occluder = new Mesh(K.keep(new PlaneGeometry(PW, PH)), K.keep(new MeshBasicMaterial({ colorWrite: false, depthWrite: false, side: DoubleSide, alphaMap })));
+  // WebGLShadowMap copies the visible material's alphaMap onto the custom depth material, hence the alphaMap above too.
+  occluder.customDepthMaterial = K.keep(new MeshDepthMaterial({ alphaMap, alphaHash: true, side: DoubleSide }));
   const name = sheets.at(-1)!.position;
   occluder.position.copy(name).addScaledVector(LIGHT, 3.2);
   occluder.lookAt(occluder.position.clone().add(LIGHT));

@@ -1,10 +1,10 @@
-// The About margin notes are written in ink as the reader scrolls and unwritten on the way back. Each line is SVG text
-// under a mask whose path runs along its baseline; the path's stroke-dashoffset is a pure function of scroll position.
-// The markup ships fully drawn, so reduced motion, no mask support or no script all show the finished notes.
+// The About margin tags are typed in as the reader scrolls and untyped on the way back. Each line is SVG text in the
+// UI mono face (handwriting lives only on the 3D desk) under a mask whose path runs along its baseline; the path's
+// stroke-dashoffset is a pure function of scroll position. The markup ships fully drawn, so reduced motion, no mask
+// support or no script all show the finished tags.
 import { store } from "./store.ts";
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
-const HAND = '"Caveat", cursive';
 
 /** Wires the notes (svg[data-ink]) under root until signal aborts. held: how far a sticky ancestor is holding the
  *  notes below where they would have scrolled to, in px; progress follows that position, so it never stalls. */
@@ -21,12 +21,11 @@ export function write(root: HTMLElement, signal: AbortSignal, held: () => number
     path.style.strokeDashoffset = String(1 - clamp(p[i]! * n.paths.length - k));
   }));
 
-  // The face is named only once About is a viewport away, so the font is fetched only when the notes are near.
+  // Measured once About is a viewport away and the UI faces have settled, so each mask ends on the real glyphs.
   const io = new IntersectionObserver((es) => {
     if (!es.some((e) => e.isIntersecting)) return;
     io.disconnect();
-    for (const n of notes) n.svg.setAttribute("font-family", HAND);
-    void document.fonts.load(`500 18px ${HAND}`).then(() => {
+    void document.fonts.ready.then(() => {
       if (signal.aborted) return;
       // Each mask path ends where its line's ink ends, so every line is written at the same pace.
       for (const n of notes) n.texts.forEach((t, k) => {

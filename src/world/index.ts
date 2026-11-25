@@ -17,7 +17,7 @@ const FIRST_FRAME = 3000; // ms with Work on screen before a world that never dr
 let warmDone: (ok: boolean) => void = () => {};
 export const worldWarm = new Promise<boolean>((r) => { warmDone = r; });
 
-const load = () => Promise.all([import("./core.ts"), import("./work.ts"), import("./about.ts"), import("./lab.ts"), import("./sign.ts"), import("./scatter.ts")]);
+const load = () => Promise.all([import("./core.ts"), import("./work.ts"), import("./about.ts"), import("./lab.ts"), import("./sign.ts"), import("./scatter.ts"), import("./doodles.ts")]);
 
 // The contact tiles: Contact.tsx renders four real controls in .ct__tiles; the sign station hands their screen
 // quads every frame and these lay the controls over the printed tiles. Written only when a value moves by half a pixel.
@@ -122,7 +122,7 @@ export function mountWorld(stage: HTMLElement): () => void {
     io.disconnect();
     cancelIdle();
     try {
-      const [{ createWorld }, { createWorkStation }, { createAboutStation }, { createLabStation }, { createSignStation }, { withScatter }] = await load();
+      const [{ createWorld }, { createWorkStation }, { createAboutStation }, { createLabStation }, { createSignStation }, { withScatter }, { withDoodles }] = await load();
       if (ac.signal.aborted) return;
       const s = store.get();
       const w = (world = createWorld({ tier: tier(), mode: s.mode, reduced: s.motion === "reduced", onFail: fail }));
@@ -134,7 +134,7 @@ export function mountWorld(stage: HTMLElement): () => void {
       html.classList.remove("world-wait");
       registry.get("refresh")?.request("layout");
       const about = document.getElementById("about"), lab = document.getElementById("lab");
-      w.add(withScatter(w.ctx, work)); // the props ride on the first station: it is always on the frame list
+      w.add(withDoodles(w.ctx, withScatter(w.ctx, work))); // the props ride on the first station: it is always on the frame list
       if (about) w.add(createAboutStation(w.ctx, about));
       if (lab) w.add(createLabStation(w.ctx, lab));
       const sign = createSignStation(w.ctx, lab ?? document.getElementById("contact"), paintTiles);

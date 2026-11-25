@@ -2,6 +2,7 @@
 import type { WorkItem } from "../lib/content";
 import { LINKS, SECTIONS, UI } from "../lib/site";
 import type { Mode } from "../rr/store.ts";
+import { scribble } from "./doodles.ts";
 
 // Light faces in Raster too: dark faces dither into noise and the titles stop reading.
 const INK = {
@@ -144,6 +145,59 @@ export function drawFace(item: WorkItem, mode: Mode, w: number): HTMLCanvasEleme
   return c;
 }
 
+// Strips (logical px) where a neighbour plate's title peeks out above/below the front plate; stretch undoes the ~2x foreshortening.
+const PEEK = { top: [28, 150], bottom: [490, 612], stretch: 1.6 } as const;
+
+/** A plate's title alone, once in each peek strip, one line: what shows of a neighbour plate on the drum. */
+export function drawPeek(item: WorkItem, mode: Mode, w: number): HTMLCanvasElement {
+  const p = INK[mode], f = FONT[mode], raster = mode === "raster", S = PEEK.stretch, CELL = 6, gh = 11, L = 56, W = 912;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = Math.round(w / 1.6);
+  const g = c.getContext("2d")!;
+  g.scale(w / 1024, w / 1024);
+  g.fillStyle = p.bg;
+  g.fillRect(0, 0, 1024, 640);
+  // Raster measures and draws on a tiny bitmap (1 bit, scaled up unsmoothed); Render on the card itself.
+  const b = document.createElement("canvas");
+  b.width = W / CELL;
+  b.height = gh;
+  const bg = b.getContext("2d", { willReadFrequently: true })!, mg = raster ? bg : g;
+  const font = (z: number) => (raster ? `800 ${z}px ${f.mono}` : small(mode, 500, z)), lim = raster ? b.width : W;
+  let t = item.pre ? `${item.pre} ${item.title}` : item.title, s = raster ? 12 : 38;
+  if (raster) t = t.toUpperCase();
+  mg.font = font(s);
+  while (s > (raster ? 7 : 20) && mg.measureText(t).width > lim) mg.font = font(--s);
+  if (mg.measureText(t).width > lim) {
+    while (t.length > 1 && mg.measureText(`${t}...`).width > lim) t = t.slice(0, -1);
+    t = `${t.trimEnd()}...`;
+  }
+  if (raster) {
+    bg.fillStyle = "#000";
+    bg.textBaseline = "alphabetic";
+    bg.fillText(t, 0, 9);
+    const img = bg.getImageData(0, 0, b.width, gh);
+    for (let i = 3; i < img.data.length; i += 4) img.data[i] = img.data[i]! >= 110 ? 255 : 0;
+    bg.putImageData(img, 0, 0);
+    bg.globalCompositeOperation = "source-in"; // tint the 1-bit mask with the ink colour
+    bg.fillStyle = p.ink2;
+    bg.fillRect(0, 0, b.width, gh);
+    g.imageSmoothingEnabled = false;
+  }
+  for (const [y0, y1] of [PEEK.top, PEEK.bottom]) {
+    const cy = (y0 + y1) / 2;
+    if (raster) { g.drawImage(b, L, cy - (gh * CELL * S) / 2, W, gh * CELL * S); continue; }
+    g.save();
+    g.translate(L, cy + s * 1.3 * 0.3 * S);
+    g.scale(1, S);
+    g.fillStyle = p.mute;
+    g.globalAlpha = 0.75;
+    ink(g, t, 0, 0);
+    g.restore();
+  }
+  return c;
+}
+
 /** A plain paper card (Lab tray, sign-off stack): the kind on top, a title, an honest chip on dummy entries.
  *  `n` is accepted and not printed: no numbers on faces. */
 export function drawCard(o: { n?: string; kind?: string; title: string; chip?: boolean; big?: boolean }, mode: Mode, w: number, ratio = 1.6): HTMLCanvasElement {
@@ -202,6 +256,7 @@ export function drawContact(mode: Mode, w: number): HTMLCanvasElement {
   put(g, mode, sec.title.toUpperCase(), L, raster ? 108 : 100);
   g.fillStyle = p.rule;
   g.fillRect(L, raster ? 136 : 128, R - L, raster ? 8 : 2);
+  scribble(g, "plane", 850, 72, raster ? 0.6 : 1.1, raster, p.ink2); // free top-right corner, above the rule
   const lw = raster ? 8 : 3;
   TILES.forEach((t, i) => {
     g.fillStyle = p.panel;

@@ -9,7 +9,7 @@ import { mod } from "../rr/ringMath.ts";
 import { store, type Mode } from "../rr/store.ts";
 import { type Ctx, type Frame, type Rest, type Station, type Target } from "./core.ts";
 import { cues, lockAxis, release, spring, SPRING } from "./cues.ts";
-import { drawFace, fontsFor } from "./faces.ts";
+import { drawFace, drawPeek, fontsFor } from "./faces.ts";
 import { withDesk } from "./desk.ts";
 import { kit } from "./kit.ts";
 
@@ -22,7 +22,7 @@ const C = new Vector3(0, 0, 1.12); // axle centre above the table
 const PITCH = 40 * DEG; // the front plate faces a camera 40 degrees off the vertical
 // peek: lift of a hovered neighbour plate (wu). fold: f.w where the plates are fully back in their stack, and where they start to fold.
 const M = { lift: 0.07, press: 0.13, peek: 0.04, tilt: 6, dragPx: 160, step: 160, fold: { end: 0.5, start: 0.95 } };
-const CUE_AT = { x: 1.5, y: 0.2, turn: -8 }; // the drag cue decal on the table, clear of the pencil (0.8, -0.8) and the rule
+const CUE_AT = { x: 1.8, y: 2.45, turn: -8 }; // the drag cue decal on open table above-right of the stack, clear of the books (0.33, 3.51)
 const X = new Vector3(1, 0, 0);
 const FRONT = new Vector3(0, -Math.sin(PITCH), Math.cos(PITCH));
 const UP = new Vector3().crossVectors(FRONT, X);
@@ -43,15 +43,16 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
   const box = K.card(PW, PH, PT);
   const body = K.paper(0xede9e0, 0xd9d4c8), edge = K.edge(0xede9e0, 0xb8b3a7), back = K.paper(0xd8d2c6, 0x8c877c);
   const faces = WORK.map((w) => K.face((m, px) => drawFace(w, m, px), 1280, 640));
+  const peeks = WORK.map((w) => K.face((m, px) => drawPeek(w, m, px), 768, 640));
   const plates = faces.map(() => {
     const m = new Mesh(box);
     m.castShadow = m.receiveShadow = true;
     scene.add(m);
     return m;
   });
-  // A plate lying under the top of the stack, or off the front of the drum, shows plain paper.
-  const bare = plates.map(() => false);
-  const matsFor = (i: number, mode: Mode) => [edge[mode], bare[i] ? body[mode] : faces[i]![mode], back[mode]];
+  // A plate lying under the top of the stack shows plain paper; a drum neighbour shows only its title (peek); else its full face.
+  const bare = plates.map(() => 0); // 0 face, 1 peek, 2 plain body
+  const matsFor = (i: number, mode: Mode) => [edge[mode], bare[i] === 2 ? body[mode] : (bare[i] ? peeks : faces)[i]![mode], back[mode]];
   const shadow = K.contact(PW + 0.6, PH + 0.5, 0.075, -0.075);
   // A contact shadow under every stacked plate but the bottom one, on the plate below; they leave with their plate.
   const levels = plates.map(() => K.contact(PW + 0.12, PH + 0.1, 0, 0));
@@ -69,7 +70,7 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
     plates.forEach((p, i) => (p.material = matsFor(i, m)));
     spine.material = spineM[m];
     cue.setMode(m);
-    faces.forEach((f) => f.ensure(m));
+    faces.concat(peeks).forEach((f) => f.ensure(m));
     ctx.request();
   }
 
@@ -355,9 +356,9 @@ export async function createWorkStation(ctx: Ctx, stage: HTMLElement): Promise<S
       const far = Math.min(1, Math.abs(mod(k - o + N / 2, N) - N / 2)); // 0 at the front, 1 from one row away
       drumPose(k, o, l.lift - SINK * far, m.position, m.quaternion);
       m.scale.setScalar(1 - SHRINK * far * t);
-      // Printed only within a row of the front (the pair crossing it mid-turn); on the drum too, neighbours are blank paper.
-      const blank = far > 0.98 || (t === 0 && d >= 1);
-      if (bare[k] !== blank) { bare[k] = blank; m.material = matsFor(k, mode); }
+      // Printed only within a row of the front (the pair crossing it mid-turn); drum neighbours show only their title (peek).
+      const st = t === 0 && d >= 1 ? 2 : far > 0.98 ? 1 : 0;
+      if (bare[k] !== st) { bare[k] = st; m.material = matsFor(k, mode); }
       // Stack: about 0.045 wu over and 1.5 plate thicknesses up per level, each turned 1 to 4 degrees, alternating.
       tmp.flat.set(0.032 * d, -0.032 * d, PT / 2 + (N - 1 - d) * PT * 1.5);
       const turn = (d % 2 ? -1 : 1) * (1 + ((d * 37) % 4)) * DEG;

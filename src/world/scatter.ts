@@ -8,6 +8,7 @@ import type { Ctx, Frame, Station } from "./core.ts";
 import { ao, covered, FADE, screenBox, slotPairs, SLOTS } from "./desk.ts";
 import { glb } from "./glb.ts";
 import { kit } from "./kit.ts";
+import type { Clock } from "./clock.ts";
 import type { Tablet } from "./tablet.ts";
 
 const DEG = Math.PI / 180;
@@ -28,7 +29,7 @@ export function withScatter<S extends Station>(ctx: Ctx, st: S): S {
   if (ctx.tier === "phone") return st; // a few pixels of detail do not pay for seven downloads
   const K = kit(ctx), pairs = slotPairs(K);
   const items = PLACES.map((p) => ({ p, m: null as Mesh | null, a: 0, pa: NaN, want: 1, own: new Map<Material, Material>() }));
-  let asked = false, gone = false, tab: Tablet | null = null;
+  let asked = false, gone = false, tab: Tablet | null = null, clk: Clock | null = null;
 
   /** The prop's own clones of the slot materials (its fade never reaches a neighbour); Render also takes the baked AO (COLOR_0). */
   const dress = (it: (typeof items)[number]) => SLOTS.map((s) => {
@@ -64,6 +65,7 @@ export function withScatter<S extends Station>(ctx: Ctx, st: S): S {
         m.visible = false;
         ctx.scene.add(m);
         if (it.p.name === "tablet-ipad") void import("./tablet.ts").then((t) => { if (!gone) { tab = t.tablet(ctx, K, m); ctx.request(); } });
+        if (it.p.name === "alarm-clock") void import("./clock.ts").then((c) => { if (!gone) { clk = c.clock(ctx, K, m); ctx.request(); } });
         ctx.request();
       }, (e) => { if (import.meta.env.DEV) console.warn("[scatter]", e); });
     }
@@ -83,13 +85,14 @@ export function withScatter<S extends Station>(ctx: Ctx, st: S): S {
       else if (Math.abs(it.want - it.a) > 0.004) { it.a += (it.want - it.a) * k; busy = true; } else it.a = it.want;
       paint(it);
       if (tab && it.p.name === "tablet-ipad" && tab.step(dt, f, it.a)) busy = true;
+      if (clk && it.p.name === "alarm-clock") clk.step(dt, f, it.a);
     }
     return busy;
   }
 
   const frame = st.frame.bind(st), setMode = st.setMode.bind(st), dispose = st.dispose.bind(st);
   st.frame = (dt, now, f) => { const a = frame(dt, now, f); return step(dt, f) || a; };
-  st.setMode = (m) => { setMode(m); apply(); tab?.setMode(m); };
-  st.dispose = () => { gone = true; tab?.dispose(); ctx.scene.remove(...items.flatMap((it) => (it.m ? [it.m] : []))); dispose(); K.dispose(); };
+  st.setMode = (m) => { setMode(m); apply(); tab?.setMode(m); clk?.setMode(m); };
+  st.dispose = () => { gone = true; tab?.dispose(); clk?.dispose(); ctx.scene.remove(...items.flatMap((it) => (it.m ? [it.m] : []))); dispose(); K.dispose(); };
   return st;
 }

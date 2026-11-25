@@ -2,8 +2,6 @@
 // kept) drawing into both, one rAF loop that only runs while the stage is on screen, the tab is visible and motion is full.
 // Reduced motion paints a still frame.
 import * as budget from "./canvasBudget.ts";
-import { createRaster } from "./footer/raster.ts";
-import { createRender } from "./footer/render.ts";
 import type { Line, Palette, World } from "./footer/world.ts";
 import { token } from "./refresh.ts";
 import type { Handle } from "./registry.ts";
@@ -21,33 +19,80 @@ const readPalette = (): Palette => ({
   mute: token("--mute"), rule: token("--rule"), signal: token("--signal"), trace: token("--trace"),
 });
 
+/** One lazy chunk per mode: a mode never downloads the other's code. */
+const loaders: Record<Mode, () => Promise<World>> = {
+  raster: () => import("./footer/raster.ts").then((m) => m.createRaster()),
+  render: () => import("./footer/cat.ts").then((m) => m.createCat()),
+};
+
 export async function create(o: ClosingHost): Promise<Handle> {
   const { signal, host, back: canvas, front } = o;
   const x = canvas.getContext("2d"), xf = front.getContext("2d");
   if (!x || !xf) throw new Error("closing: 2d context unavailable");
   const cvs = [canvas, front];
 
-  const worlds: Partial<Record<Mode, World>> = {};
-  const worldFor = (m: Mode): World => (worlds[m] ??= m === "raster" ? createRaster() : createRender());
+  const worlds: Partial<Record<Mode, Promise<World>>> = {}; // created once per mode, kept
+  const worldFor = (m: Mode) => (worlds[m] ??= loaders[m]());
   let mode = store.get().mode;
-  let world = worldFor(mode);
+  let world = await worldFor(mode);
+  if (signal.aborted) return { destroy() {} };
   let pal = readPalette();
   let cell = 1;
   let vis = false, stale = false, dead = false, raf = 0, last = 0;
   const unregs = cvs.map((c) => budget.register(c, { visible: () => vis, onEvict: () => { stale = true; } }));
 
   const reduced = () => store.get().motion === "reduced";
+  let bat = 0;
+  /** The dot's bounce reaches the CSS as px (--ftr-bat), only when it changes by a tenth. */
+  const setBat = (v: number) => {
+    const px = Math.round(v * cell * 10) / 10;
+    if (px !== bat) host.style.setProperty("--ftr-bat", `${(bat = px)}px`);
+  };
+
+  // Render letter tilt: the one tilted character is wrapped in a rotated inline-block span (React owns the name as one string
+  // child and never holds its text node, so the temporary wrap is safe). refs: [line][char index] -> word and offset.
+  let refs: { w: HTMLElement; off: number }[][] = [];
+  let tw: { span: HTMLElement; w: HTMLElement; li: number; i: number; deg: number; oy: string } | null = null;
+  const untilt = () => {
+    if (!tw) return;
+    tw.span.replaceWith(tw.span.textContent ?? "");
+    tw.w.normalize();
+    tw = null;
+  };
+  function syncTilt() {
+    const q = world.tilt?.();
+    if (!q || !q[2]) return untilt();
+    const [li, i, deg] = q;
+    if (tw && (tw.li !== li || tw.i !== i)) untilt();
+    if (!tw) {
+      const r = refs[li]?.[i], t = r?.w.firstChild;
+      if (!r || !t) return;
+      const rg = document.createRange();
+      rg.setStart(t, r.off); rg.setEnd(t, r.off + 1);
+      const span = document.createElement("span");
+      rg.surroundContents(span);
+      span.style.display = "inline-block";
+      const h = span.getBoundingClientRect(), b = r.w.getBoundingClientRect().bottom; // the word box ends on the baseline
+      tw = { span, w: r.w, li, i, deg: NaN, oy: h.height ? `${b - h.top}px` : "86.5%" };
+    }
+    if (Math.abs(deg - tw.deg) < 0.1) return;
+    tw.deg = deg;
+    tw.span.style.transformOrigin = `${deg > 0 ? "100%" : "0"} ${tw.oy}`;
+    tw.span.style.rotate = `${deg}deg`;
+  }
 
   /** One repaint outside the loop: a composed still when motion is reduced, the current frame otherwise. */
   function paint() {
     if (dead || !canvas.width || !front.width) return;
-    if (reduced()) world.still();
+    if (reduced()) { world.still(); setBat(0); }
+    syncTilt();
     world.draw(x!, xf!, pal);
   }
 
   /** Every visible line of the name in drawing units (the canvases are bottom-anchored at the host's left edge, at y0, x0). */
   function lines(y0: number, x0: number): Line[] {
     const u = (v: number, o: number) => (v - o) / cell;
+    refs = [];
     const svg = [...host.querySelectorAll<SVGSVGElement>("svg[data-ls]")].find((e) => e.getClientRects().length);
     if (svg) {
       const r = svg.getBoundingClientRect(), k = r.width / (svg.viewBox.baseVal.width || 1);
@@ -62,9 +107,11 @@ export async function create(o: ClosingHost): Promise<Handle> {
       if (!r.width || !t) continue;
       let ln = out.find((o) => Math.abs(o.base - u(r.bottom, y0)) < 2);
       if (!ln) out.push((ln = { top: u(r.top, y0), base: u(r.bottom, y0), l: [], ch: "" }));
+      const rs = (refs[out.indexOf(ln)] ??= []);
       for (let i = 0; i < (t.textContent ?? "").length; i++) {
         rg.setStart(t, i); rg.setEnd(t, i + 1);
         const c = rg.getBoundingClientRect();
+        rs[ln.l.length / 2] = { w, off: i };
         ln.l.push(u(c.left, x0), u(c.right, x0));
         ln.ch += t.textContent![i];
       }
@@ -77,6 +124,7 @@ export async function create(o: ClosingHost): Promise<Handle> {
   function layout() {
     const w = host.clientWidth, h = host.clientHeight;
     if (!w || !h || dead) return;
+    untilt(); // measure the plain text
     // The one stage scale (footer.css --ftr-k) is the size of a drawing unit, so every scene dimension follows it
     const k = parseFloat(getComputedStyle(host).getPropertyValue("--ftr-k")) || 1;
     let cw = w, ch = h, dpr = 1;
@@ -107,6 +155,8 @@ export async function create(o: ClosingHost): Promise<Handle> {
     const dt = last ? Math.min(0.1, (t - last) / 1000) : 0;
     last = t;
     world.step(dt);
+    setBat(world.bat?.() ?? 0);
+    syncTilt();
     world.draw(x!, xf!, pal);
     raf = requestAnimationFrame(frame);
   }
@@ -151,10 +201,15 @@ export async function create(o: ClosingHost): Promise<Handle> {
   io.observe(host);
 
   const offMode = store.subscribe("mode", (s) => {
-    mode = s.mode;
-    world = worldFor(mode);
-    pal = readPalette();
-    layout();
+    const m = s.mode;
+    untilt();
+    void worldFor(m).then((w) => {
+      if (dead || store.get().mode !== m) return;
+      mode = m; world = w;
+      setBat(0);
+      pal = readPalette();
+      layout();
+    }).catch(() => {}); // a failed chunk keeps the current world
   });
   const offMotion = store.subscribe("motion", () => { sync(); paint(); });
 
@@ -163,6 +218,7 @@ export async function create(o: ClosingHost): Promise<Handle> {
   const destroy = () => {
     if (dead) return;
     dead = true;
+    untilt();
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     ac.abort();

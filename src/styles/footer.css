@@ -63,6 +63,8 @@
 .ftr-name__s .ftr-dot { left: 0.037em; bottom: -0.015em; width: 0.148em; height: 0.148em; }
 .ftr-dot::before { content: ""; position: absolute; inset: -10px; }
 .ftr-dot:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+/* The bat bounce rides `transform` (no transition, it is driven per frame) so the hover lift in `translate` composes untouched. */
+.ftr-name__s > span { transform: translateY(var(--ftr-bat, 0px)); }
 .ftr-name__s > span, .ftr-dot__r { transition: translate 160ms ease-out; }
 @media (hover: hover) {
   .ftr-name__s:has(.ftr-dot:hover) > span { translate: 0 -0.05em; }
