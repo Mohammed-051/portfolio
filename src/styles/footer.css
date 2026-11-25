@@ -75,6 +75,7 @@
    more head room for the scene above it. */
 @media (max-width: 899px) {
   .ftr-name { padding: calc(26% * var(--ftr-k)) 0 calc(4% * var(--ftr-k)); }
+  :root[data-mode="render"] .ftr-name { padding-top: calc(5.4% * var(--ftr-k)); } /* the garden needs only perch + Zzz room */
 }
 
 /* Colophon: one quiet line under the stage. No fixed control sits at the bottom, so no clearance. */
