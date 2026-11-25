@@ -90,6 +90,7 @@ function Header() {
   return (
     <header ref={head} className="nav nv" data-c="0">
       <a href="#top" className="nv__name" aria-label={`${SITE.name}, back to top`} data-sfx="key">
+        <span className="mk" aria-hidden="true" />
         <span className="nv__m" aria-hidden="true">
           {FIRST[0]}
           <span className="nv__dot">.</span>

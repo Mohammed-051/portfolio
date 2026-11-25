@@ -17,17 +17,25 @@ var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 if(reduce)c.add("calm");else if(!plain)c.add("enhanced");
 if(!plain&&(!s||/[?&]intro=1/.test(location.search))){c.add("rr-intro");history.scrollRestoration="manual";history.replaceState(null,"",location.pathname+location.search);scrollTo(0,0)}else if(!plain)c.add("veil");
 setTimeout(function(){c.contains("booted")||c.add("rr-boot-timeout")},2600);})();</script>
-    <meta name="description" content="Mohammed Parvez, Creator &amp; Developer based in Dhaka, Bangladesh. B.Sc. CSE, final semester, Daffodil International University. President, AR/VR &amp; Game Development Lab." />
-    <meta property="og:title" content="Mohammed Parvez, Creator &amp; Developer" />
-    <meta property="og:description" content="Creator &amp; Developer based in Dhaka, Bangladesh." />
+    <meta name="description" content="Raster &amp; Render: the portfolio of Mohammed Parvez, a creator and developer in Dhaka, Bangladesh. B.Sc. CSE, final semester, Daffodil International University. President, AR/VR &amp; Game Development Lab." />
+    <meta property="og:site_name" content="Raster &amp; Render" />
+    <meta property="og:title" content="Raster &amp; Render" />
+    <meta property="og:description" content="The portfolio of Mohammed Parvez, creator and developer in Dhaka, Bangladesh." />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en" />
-    <title>Mohammed Parvez, Creator &amp; Developer</title>
+    <meta property="og:url" content="https://mohammedparvez.work/" />
+    <meta property="og:image" content="https://mohammedparvez.work/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Raster &amp; Render</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
     <div class="intro" data-ph="load" role="dialog" aria-modal="true" aria-labelledby="intro-h">
-      <div class="intro__top"><p class="intro__name">MOHAMMED PARVEZ</p><p class="intro__h" id="intro-h">Loading</p><button class="intro__snd" type="button" aria-pressed="false" data-sfx="toggle">Sound: Off</button></div>
+      <div class="intro__top"><p class="intro__name"><span class="mk" aria-hidden="true"></span>MOHAMMED PARVEZ</p><p class="intro__h" id="intro-h">Loading</p><button class="intro__snd" type="button" aria-pressed="false" data-sfx="toggle">Sound: Off</button></div>
       <div class="intro__pane" data-m="render" inert><span class="intro__l">Render</span><p class="intro__t">Ink on paper.</p><button class="intro__key" type="button" data-pick="render" data-sfx="intro">Enter in Render</button></div>
       <div class="intro__pane" data-m="raster" inert><span class="intro__l">Raster</span><p class="intro__t">Cells on a grid.</p><button class="intro__key" type="button" data-pick="raster" data-sfx="intro">Enter in Raster</button></div>
       <i class="intro__door"></i><i class="intro__door"></i><i class="intro__ln"></i>
