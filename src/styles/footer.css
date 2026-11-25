@@ -80,10 +80,6 @@
 
 /* Colophon: one quiet line under the stage. No fixed control sits at the bottom, so no clearance. */
 .ftr-fine {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 24px;
   padding: 16px var(--grid-margin) calc(env(safe-area-inset-bottom, 0px) + 16px);
   background: var(--paper);
   border-top: 1px solid var(--rule);

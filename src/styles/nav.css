@@ -1,13 +1,13 @@
 /* Navbar. One fixed object driven by scroll: Layout.tsx writes --nv (0 at the
-   top, 1 compact) from scrollY on each scrolled frame and --nv-d (the slide that docks PARVEZ after "M."). Everything here moves
-   by transform or opacity, so compaction never changes layout. Unlayered: it beats the old .nav rules in app.css. */
+   top, 1 compact) from scrollY on each scrolled frame. The brand tails (.nv__x) collapse once compaction starts, driven by data-c. Everything else moves
+   by transform or opacity; only the tails' grid track changes layout, inside the absolutely placed name. Unlayered: it beats the old .nav rules in app.css. */
 
 /* The scrolling root keeps native scrolling (wheel, keys, programmatic, Lenis); only the bar is gone. The nav label orients. */
 html { scrollbar-width: none; }
 html::-webkit-scrollbar { display: none; }
 
 .nv {
-  --nv: 0; --nv-d: 0; --nv-F: 26; /* name size at the top, px; compact text is 16 px */
+  --nv: 0; --nv-F: 26; /* name size at the top, px; compact text is 16 px */
   --nv-k: calc(16 / var(--nv-F)); --nv-dy: calc(var(--nv-F) * 0.5px - 8px);
   position: fixed; inset: 0 0 auto 0; z-index: 40; display: flex; justify-content: flex-end; align-items: center; gap: 24px;
   height: 44px; padding-inline: var(--g); color: var(--color-bone-100); background: none; box-shadow: none; translate: none; transition: translate 520ms cubic-bezier(.22, 1, .36, 1);
@@ -36,7 +36,7 @@ html::-webkit-scrollbar { display: none; }
 }
 :root.world-band .nv::before { opacity: 0; } /* over the dark table work.css paints the header itself */
 
-/* The name: MOHAMMED PARVEZ at the top, M. PARVEZ plus the live section once compact. */
+/* The brand: cat mark then RASTER & RENDER at the top; once compact it reads R & R plus the live section. */
 .nv__name {
   position: absolute; left: var(--g); top: 22px; display: flex; align-items: baseline;
   font-family: var(--font-name); font-weight: var(--name-weight); letter-spacing: var(--name-track);
@@ -50,11 +50,12 @@ html::-webkit-scrollbar { display: none; }
 .mk::after { content: ""; position: absolute; left: 80.62%; top: 75.98%; width: 9.38%; height: 9.38%; border-radius: 50%; background: var(--signal); }
 :root[data-mode="raster"] .mk { mask-image: url(/cat-px.svg); }
 :root[data-mode="raster"] .mk::after { left: 79.17%; top: 75%; width: 8.33%; height: 8.33%; border-radius: 0; }
-.nv__m { position: relative; }
-.nv__dot { position: absolute; left: 100%; opacity: clamp(0, (var(--nv) - 0.45) / 0.3, 1); }
-.nv__o { opacity: clamp(0, (0.45 - var(--nv)) / 0.2, 1); }
-/* The word space as a margin: flex drops the whitespace text node between the spans. */
-.nv__p { position: relative; margin-left: 0.26em; translate: calc(clamp(0, (var(--nv) - 0.3) * 2, 1) * var(--nv-d) * -1px) 0; }
+/* Tails collapse on a grid track sized by the live glyphs, so font, mode and resize never need measuring; the cat and the initials never move. */
+.nv__t { position: relative; }
+.nv__x { display: inline-grid; grid-template-columns: 1fr; transition: grid-template-columns 440ms var(--ease-out-expo), opacity 260ms var(--ease-out-expo); }
+.nv__x > span { min-width: 0; overflow: clip; padding-right: 0.05em; margin-right: -0.05em; } /* overhang room for the last glyph that adds no width, so R & R closes up */
+.nv[data-c="1"] .nv__x { grid-template-columns: 0fr; opacity: 0; }
+:root[data-mode="raster"] .nv__x { transition: grid-template-columns 320ms steps(6), opacity 320ms steps(3); }
 .nv__sec { position: absolute; left: 100%; bottom: 0.08em; padding-left: 0.45em; opacity: clamp(0, (var(--nv) - 0.8) / 0.2, 1); font: 500 0.72em/1 var(--font-read); letter-spacing: 0.04em; }
 .nv__sec > span { display: inline-block; animation: nv-in var(--duration-fast) var(--ease-out-expo) both; }
 :root[data-mode="raster"] .nv__sec > span { animation: nv-type var(--duration-fast) steps(6) both; }
@@ -62,11 +63,6 @@ html::-webkit-scrollbar { display: none; }
 @keyframes nv-type { from { clip-path: inset(0 100% 0 0); } }
 /* The footer wordmark is the bookend: the name steps aside there. */
 .nv[data-end] .nv__name { opacity: 0; visibility: hidden; }
-/* Reduced motion: no scrub; the state flips at 0.2 vh with one 150 ms fade, and the label swaps at once. */
-html.calm .nv[data-c="0"] .nv__name { animation: nv-x0 150ms linear !important; }
-html.calm .nv[data-c="1"] .nv__name { animation: nv-x1 150ms linear !important; }
-@keyframes nv-x0 { from { opacity: 0; } }
-@keyframes nv-x1 { from { opacity: 0; } }
 
 /* Keys: text only, no border, box or bar. Render: sans, a 1 px underline grows in 240 ms. Raster: mono caps, inverse video at once. */
 .nv__ctl, .nv__list { display: flex; align-items: center; gap: clamp(14px, 1.6vw, 24px); }

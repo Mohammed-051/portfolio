@@ -32,7 +32,7 @@ const WIDE = "(min-width: 1024px)";
 const onWide = (cb: () => void) => { const q = matchMedia(WIDE); q.addEventListener("change", cb); return () => q.removeEventListener("change", cb); };
 const useWide = () => useSyncExternalStore(onWide, () => matchMedia(WIDE).matches);
 
-const [FIRST = "", ...REST] = SITE.name.split(" ");
+const [A = "", B = ""] = SITE.brand.split(" & ");
 
 function Header() {
   const current = useRRStore((s) => s.currentSection);
@@ -47,10 +47,7 @@ function Header() {
 
   useEffect(() => {
     const el = head.current!;
-    const q = <T extends HTMLElement>(s: string) => el.querySelector<T>(s)!;
     let raf = 0, prev = "", py = scrollY, acc = 0;
-    // How far PARVEZ slides to sit one space after "M.": the hidden letters less the dot (unscaled layout, transforms ignored).
-    const measure = () => { el.style.setProperty("--nv-d", String(q(".nv__o").offsetWidth - q(".nv__dot").offsetWidth)); };
     const update = () => {
       raf = 0;
       const s = store.get(), vh = innerHeight;
@@ -58,7 +55,7 @@ function Header() {
       if (v !== prev) {
         prev = v;
         el.style.setProperty("--nv", v);
-        el.dataset["c"] = v === "1" ? "1" : "0";
+        el.dataset["c"] = v !== "0" ? "1" : "0";
       }
       const f = document.querySelector(".ftr-name");
       const d = scrollY - py;
@@ -68,16 +65,14 @@ function Header() {
       el.toggleAttribute("data-end", !!f && f.getBoundingClientRect().top < vh * 0.9);
     };
     const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
-    const resize = () => { measure(); queue(); };
     const ac = new AbortController(), opt = { passive: true, signal: ac.signal };
     addEventListener("scroll", queue, opt);
-    addEventListener("resize", resize, opt);
+    addEventListener("resize", queue, opt);
     el.addEventListener("focusin", queue, { signal: ac.signal });
     el.addEventListener("focusout", queue, { signal: ac.signal });
     menu.current!.addEventListener("close", queue, { signal: ac.signal });
-    document.fonts.addEventListener("loadingdone", measure, { signal: ac.signal });
-    const offs = [store.subscribe("mode", resize), store.subscribe("motion", queue)];
-    resize();
+    const offs = [store.subscribe("mode", queue), store.subscribe("motion", queue)];
+    queue();
     return () => { ac.abort(); cancelAnimationFrame(raf); offs.forEach((f) => f()); };
   }, []);
 
@@ -89,16 +84,10 @@ function Header() {
 
   return (
     <header ref={head} className="nav nv" data-c="0">
-      <a href="#top" className="nv__name" aria-label={`${SITE.name}, back to top`} data-sfx="key">
+      <a href="#top" className="nv__name" aria-label={SITE.brand} data-sfx="key">
         <span className="mk" aria-hidden="true" />
-        <span className="nv__m" aria-hidden="true">
-          {FIRST[0]}
-          <span className="nv__dot">.</span>
-        </span>
-        <span className="nv__o" aria-hidden="true">{FIRST.slice(1)}</span>
-        {" "}
-        <span className="nv__p" aria-hidden="true">
-          {REST.join(" ")}
+        <span className="nv__t" aria-hidden="true">
+          {A[0]}<span className="nv__x"><span>{A.slice(1)}</span></span>{" & "}{B[0]}<span className="nv__x"><span>{B.slice(1)}</span></span>
           <span className="nv__sec">
             <span key={label}>{"• "}{label}</span>
           </span>
@@ -203,7 +192,6 @@ function Footer() {
         <p>
           {SITE.name}, {YEAR}
         </p>
-        <p>Set in Newsreader, Instrument Sans, Bodoni Moda, Doto, Jersey 25, JetBrains Mono and Caveat</p>
       </div>
     </footer>
   );

@@ -1,6 +1,7 @@
 /** Hero, nav and link facts. Section copy lives in content.ts; nothing outside these two files is personal copy. */
 export const SITE = {
   name: "Mohammed Parvez",
+  brand: "Raster & Render",
   place: "Dhaka, Bangladesh",
   coords: "23.81N 90.41E",
   study: "B.Sc. CSE, final semester, Daffodil International University",
