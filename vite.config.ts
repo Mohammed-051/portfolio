@@ -1,4 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -50,15 +52,39 @@ const projectImages = (() => {
     .flatMap((d) => readdirSync(`${root}/${d.name}`).filter((f) => f.endsWith(".png")).map((f) => `images/projects/${d.name}/${f}`));
 })();
 
+/** Production headers, shared by Vercel and `vite preview` so CSP violations show up locally. */
+const vercel = JSON.parse(readFileSync(fileURLToPath(new URL("./vercel.json", import.meta.url)), "utf8"));
+const siteHeaders: { key: string; value: string }[] = vercel.headers.find((h: { source: string }) => h.source === "/(.*)").headers;
+
+/** Vercel runs only `npm run build`, so fail it when an inline script/style hash drifts from the CSP; the last good deploy stays live. */
+const cspHashGuard = (): Plugin => {
+  let outDir = "";
+  return {
+    name: "csp-hash-guard",
+    apply: "build",
+    configResolved: (c) => { outDir = resolve(c.root, c.build.outDir); },
+    closeBundle() {
+      const html = readFileSync(resolve(outDir, "index.html"), "utf8");
+      const csp = siteHeaders.find((h) => h.key === "Content-Security-Policy")?.value ?? "";
+      for (const m of html.matchAll(/<(script|style)(\s[^>]*)?>([\s\S]*?)<\/\1>/gi)) {
+        if (m[1].toLowerCase() === "script" && /\ssrc\s*=/i.test(m[2] ?? "")) continue;
+        const hash = `sha256-${createHash("sha256").update(m[3].replace(/\r\n?/g, "\n")).digest("base64")}`;
+        if (!csp.includes(`'${hash}'`)) throw new Error(`CSP hash guard: inline <${m[1]}> in dist/index.html has hash '${hash}' missing from vercel.json Content-Security-Policy. Update vercel.json.`);
+      }
+    },
+  };
+};
+
 export default defineConfig({
   define: { __PROJECT_IMAGES__: JSON.stringify(projectImages) },
-  plugins: [react(), tailwindcss(), preloadDisplayFont, rrFallback(), rrContentRoute],
+  plugins: [react(), tailwindcss(), preloadDisplayFont, rrFallback(), rrContentRoute, cspHashGuard()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
   build: {
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: (id) => {
@@ -77,5 +103,6 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 4180,
     strictPort: true,
+    headers: Object.fromEntries(siteHeaders.map((h) => [h.key, h.value])),
   },
 });
