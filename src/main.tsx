@@ -21,3 +21,6 @@ createRoot(document.getElementById("root")!).render(
 );
 
 if (import.meta.env.DEV) checkMotionTokens();
+
+// Vercel Speed Insights: a lazy chunk after load, off the fast path. Production only; the script is same-origin (/_vercel/...).
+if (import.meta.env.PROD) addEventListener("load", () => void import("@vercel/speed-insights").then((m) => m.injectSpeedInsights()).catch(() => {}), { once: true });
