@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { LazyMotion } from "motion/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Layout } from "./components/layout/Layout";
 import { Hero } from "./components/hero/Hero";
 import { Sections } from "./components/sections/Sections";
@@ -59,6 +60,7 @@ export default function App() {
         <Hero />
         <Sections />
       </Layout>
+      <SpeedInsights />
     </LazyMotion>
   );
 }
