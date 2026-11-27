@@ -246,7 +246,8 @@ export const WORK: WorkItem[] = [
    * every claim checked in code; draft confirmed by the owner. A team course project (OOP): course, university and
    * teammates stay off by the owner's choice; role from the owner. Left off: "reservation" (only the app's name), REST,
    * CSRF protection (no Spring Security) and tests (only contextLoads). Hotels and rooms only, no guest data. Images: real
-   * screens of the app run locally (JDK 17) with made-up hotels and rooms, 27 Nov 2026. */
+   * screens of the app run locally (JDK 17) with made-up hotels and rooms, 27 Nov 2026, after the owner had the bugs the
+   * run found fixed in the repo (a49eb1c: room forms 500, hotel Edit link, validation and bad-id messages not shown). */
   {
     n: "W.12", id: "hotel-management", title: "Hotel Management System", kind: "Java web application, course project", year: "2025",
     status: "Completed", role: "Full-stack developer", credit: "Team project",
