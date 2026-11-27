@@ -304,12 +304,13 @@ export const WORK: WorkItem[] = [
   /* ShadowAstra Atlas. Sources: shadowastra-atlas.vercel.app (home, Team page, footer v1.0) and the team lead's public repo
    * README (stack, team, SI use: "the narration is the real voice of Mohammed Mahmud Parvez and the music is his own").
    * His part is film and motion; the app, data pipeline and models are the team's work: describe them as the product,
-   * never as his. This is the 2026 challenge; the Lab's CREDIT (Video Editor, Oct 2023) is dated three years earlier. */
+   * never as his. The site's timeline (team formed Sep 2026, concept film 1 Oct) suggests the Lab's CREDIT (Oct 2023) is this
+   * same work with another year; open with the owner. */
   {
     n: "W.15", id: "shadow-astra-atlas", title: "ShadowAstra Atlas", kind: "Web app, NASA Space Apps 2026", year: "2026",
     status: "Released, v1.0", role: "Film & motion", credit: "Team ShadowAstra, led by Abdullah Rubab",
     line: "A web app that measures every land area on Earth with NASA data to find places where crews can practise for a Moon base or a Mars mission.",
-    overview: "Team ShadowAstra built it in Dhaka for the 2026 NASA Space Apps Challenge, which asks teams to find places on Earth that stand in for the planned Moon base locations and Mars. It scores 80,206 land areas for the job you pick, such as a rover drive, an ice hunt or a lava tube, and says plainly what Earth can't copy.",
+    overview: "Team ShadowAstra built it in Dhaka for the 2026 NASA Space Apps Challenge, which asks teams to find places on Earth that stand in for the planned Moon base locations and Mars. It scores 80,206 land areas for the job you pick and says plainly what Earth can't copy.",
     build: "I do film and motion for the team: I edit its films, shape its motion language and narrate the demo film, with my own music. The app is a static React 19 and three.js site. A Python pipeline measures every land area with NASA POWER, MODIS, SRTM and EMIT data, and the Moon and Mars with LRO LOLA and MGS MOLA heights. A learned model trained on 38 known test sites ranks them.",
     highlights: [
       "Film and motion: edited and narrated the demo film, with original music",
