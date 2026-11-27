@@ -156,15 +156,17 @@ export const WORK: WorkItem[] = [
   },
   /* Banking Database. Source: the public repo (sql/, src/, data/), every claim checked in code; draft confirmed by the
    * owner. The repo's .docx report is not a source: it names MySQL, a Transaction table and timings the code does not
-   * back. A course project; the course and university stay off by the owner's choice. Seed data is Faker-generated. */
+   * back. A course project; the course and university stay off by the owner's choice. Seed data is Faker-generated.
+   * Role from the owner. Run on db<>fiddle (Oracle 21c XE), dbfiddle.uk/C4b8caEQ: 12 of the 13 tables create, since
+   * CURRENT is a reserved word (ORA-00903); the trigger, joins and load results on the boards are from that run. */
   {
     n: "W.07", id: "banking-database", title: "Banking Database", kind: "Database course project", year: "2025",
-    status: "Completed", credit: "Solo project",
+    status: "Completed", role: "Database developer", credit: "Solo project",
     line: "An Oracle banking database with an audit trigger on balance changes and a Python command-line client.",
     overview: "A relational Oracle database for a bank's core records: banks and branches, customers, accounts, credit cards, loans, loan payments and staff. A Python terminal menu works on the customer records, and a seeded generator writes fake test data for it as CSV.",
-    build: "The schema has 13 tables. Saving and Current extend Account as subtype tables keyed on the account number, phone numbers sit in their own table so a customer can have several, and Account_Management links employees to the accounts they manage. Foreign keys run from bank to branch to customer, and on to accounts, cards, loans and payments, with seven indexes on the common lookups. An AFTER UPDATE trigger writes every balance change, old and new balance, time and database user, to an audit table numbered by a sequence. The Python CLI uses cx_Oracle with bind variables to add, update, delete and look up customers, join them to their accounts and filter by city, name prefix, birth date, state or zip code. Updates are limited to an allow-list of columns. A Faker script seeded for repeatable output writes 5 banks, 10 branches, 200 customers, 400 accounts, 50 employees, 50 loans, 200 payments and 100 credit cards to CSV.",
+    build: "The schema has 13 tables. Saving and Current extend Account as subtype tables keyed on the account number, phone numbers sit in their own table so a customer can have several, and Account_Management links employees to the accounts they manage. Foreign keys run from bank to branch to customer, and on to accounts, cards, loans and payments, with seven indexes on the common lookups. An AFTER UPDATE trigger writes every balance change, old and new balance, time and database user, to an audit table numbered by a sequence. The Python CLI uses cx_Oracle with bind variables to add, update, delete and look up customers, join them to their accounts and filter by city, name prefix, birth date, state or zip code. Updates are limited to an allow-list of columns. A Faker script seeded for repeatable output writes 5 banks, 10 branches, 200 customers, 400 accounts, 50 employees, 50 loans, 200 payments and 100 credit cards to CSV. Run on Oracle 21c, 12 of the 13 tables create: CURRENT is a reserved word in Oracle.",
     highlights: [
-      "13-table Oracle schema with Saving and Current account subtypes",
+      "13-table schema with Saving and Current account subtypes",
       "AFTER UPDATE trigger logs every balance change to an audit table",
       "Python CLI on cx_Oracle with bind variables and an update allow-list",
       "Customer filters by city, name prefix, birth date, state or zip",
