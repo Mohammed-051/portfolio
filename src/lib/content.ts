@@ -32,7 +32,7 @@ export const HEAD = {
 /* Lab: creative practice. */
 export const PRACTICE = ["3D animation", "Low-poly scenes", "Game development", "Digital art", "Video editing"];
 export const TOOLS = ["Blender", "Photoshop", "Lightroom", "Illustrator", "InDesign", "Premiere Pro", "Audition", "Canva"];
-const CREDIT = { when: "Oct 2023", role: "Video Editor", where: "Team ShadowAstra, NASA Space Apps Challenge", note: "Managed and edited video content for the team's project submission." };
+const CREDIT = { when: "Oct 2026", role: "Video Editor", where: "Team ShadowAstra, NASA Space Apps Challenge", note: "Managed and edited video content for the team's project submission." };
 
 /* Work: the projects as one list. Unknown fields are left out and render
  * nothing. Counters use WORK.length. Climate Controller: no patent, schematic, layout, pinout, firmware logic
@@ -304,8 +304,7 @@ export const WORK: WorkItem[] = [
   /* ShadowAstra Atlas. Sources: shadowastra-atlas.vercel.app (home, Team page, footer v1.0) and the team lead's public repo
    * README (stack, team, SI use: "the narration is the real voice of Mohammed Mahmud Parvez and the music is his own").
    * His part is film and motion; the app, data pipeline and models are the team's work: describe them as the product,
-   * never as his. The site's timeline (team formed Sep 2026, concept film 1 Oct) suggests the Lab's CREDIT (Oct 2023) is this
-   * same work with another year; open with the owner. */
+   * never as his. The Lab's CREDIT (L.02) is this same work: its date was Oct 2023, corrected to Oct 2026 by the owner. */
   {
     n: "W.15", id: "shadow-astra-atlas", title: "ShadowAstra Atlas", kind: "Web app, NASA Space Apps 2026", year: "2026",
     status: "Released, v1.0", role: "Film & motion", credit: "Team ShadowAstra, led by Abdullah Rubab",
