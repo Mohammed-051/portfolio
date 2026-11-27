@@ -21,7 +21,7 @@ const REPO = {
 
 /** Each section's supporting title and short description, under its heading. */
 export const HEAD = {
-  work: ["Selected work", "Fifteen projects across graphics, embedded hardware, AR, robotics, AI, databases, networks and the web."],
+  work: ["Selected work", "Sixteen projects across graphics, embedded hardware, AR, robotics, AI, databases, networks and the web."],
   about: [
     "Study, lab and contests",
     "I am a final-semester Computer Science and Engineering student at Daffodil International University and President of its AR/VR & Game Development Lab. I write C and C++, build embedded systems on Arduino, ESP32 and STM32, and make AR and VR work in Unity and Blender.",
@@ -244,11 +244,12 @@ export const WORK: WorkItem[] = [
   },
   /* Hotel Management System. Source: the public repo (MIT, one upload commit of 5 Feb 2026; built in 2025 per the owner),
    * every claim checked in code; draft confirmed by the owner. A team course project (OOP): course, university and
-   * teammates stay off by the owner's choice, and no role is claimed. Left off: "reservation" (only the app's name), REST,
-   * CSRF protection (no Spring Security) and tests (only contextLoads). Hotels and rooms only, no guest data. No images yet. */
+   * teammates stay off by the owner's choice; role from the owner. Left off: "reservation" (only the app's name), REST,
+   * CSRF protection (no Spring Security) and tests (only contextLoads). Hotels and rooms only, no guest data. Images: real
+   * screens of the app run locally (JDK 17) with made-up hotels and rooms, 27 Nov 2026. */
   {
     n: "W.12", id: "hotel-management", title: "Hotel Management System", kind: "Java web application, course project", year: "2025",
-    status: "Completed", credit: "Team project",
+    status: "Completed", role: "Full-stack developer", credit: "Team project",
     line: "A Spring Boot web app for managing hotels and their rooms, with validated forms and Java entities mapped to the database by JPA.",
     overview: "A server-rendered web application for a list of hotels and the rooms in each. Staff can add, edit and delete hotels and rooms, list hotels by city, see each hotel's rooms and mark a room as available or occupied. A team project for an object-oriented programming course.",
     build: "The data model is written as Java classes, not SQL: Hotel and Room are JPA entities with a one-to-many link, and Spring Data JPA builds the tables and queries on an H2 in-memory database. Validation rules sit on the entities: a hotel needs a name of 2 to 100 characters, a city, a country and an address, and a room needs a positive nightly price and a room number and capacity of at least 1. Errors show back on the Thymeleaf forms. Controllers, services and repositories are separate layers joined by constructor injection, a global exception handler turns a bad id into a message on the hotel list, and deletes run only on POST requests.",
@@ -323,6 +324,24 @@ export const WORK: WorkItem[] = [
       { label: "Open dataset", href: "https://huggingface.co/datasets/ABRUBAB/shadowastra-atlas" },
     ],
     images: shots("shadow-astra-atlas"),
+  },
+  /* Medyx. Source: the private repo (main 0fe7d38, commits 2 to 5 Nov 2026), README, AGENTS.md and docs/; run locally
+   * as a Windows build on 27 Nov 2026. Private repo: no repo field. Solo, in development, OK to show: the owner.
+   * Medication intake and alarms are not in the pushed code: never describe them as built. */
+  {
+    n: "W.16", id: "medyx", title: "Medyx", kind: "Medication reminder app, Android", year: "2026",
+    status: "In development", role: "Solo developer", credit: "Solo project",
+    line: "An offline-first Flutter medication reminder for Android, with an always-encrypted database and a scheduling engine for interval doses.",
+    overview: "A medication reminder built so the person always knows what to take, whether it was taken, and what the app does not know. It needs no account, makes no network calls for core features and sends no telemetry. It moves reminder times only and never calculates or changes a dose. Today, Settings, routine hours and Elder mode work now; adding medications and the alarms come next.",
+    build: "The Flutter app uses Riverpod and is split into packages: a pure-Dart domain, a data layer that alone touches SQL, a native alarm bridge and a design system. The database is Drift on SQLite3MultipleCiphers, always encrypted, with its key in the Android Keystore. The scheduling engine plans fixed times, times anchored to the saved routine, and a rolling interval for doses like eye drops every two hours: the first on waking, then every N hours until bedtime. Unit tests cover its rules. Elder mode uses large type and puts Settings behind a PIN with a recovery code, both stored as salted hashes.",
+    highlights: [
+      "Encrypted database: SQLite3MultipleCiphers, key in the Android Keystore",
+      "Engine for fixed, routine-anchored and rolling doses, with unit tests",
+      "Elder mode with a PIN and recovery code",
+      "Alarm Reliability Doctor for notification, alarm and battery settings",
+      "No account, no network for core features, no telemetry",
+    ],
+    stack: ["Flutter", "Dart", "Riverpod", "Drift", "SQLite3MultipleCiphers", "Android"], links: [], images: shots("medyx"),
   },
 ];
 
