@@ -16,11 +16,12 @@ const REPO = {
   hotel: `${GH}hotel-management-system`,
   evm: `${GH}electronic-voting-machine`,
   dnsMonitor: `${GH}dns-client-monitor`,
+  shadowAstra: "https://github.com/ABRUBAB/ShadowAstra_Atlas", // the team lead's public repo
 };
 
 /** Each section's supporting title and short description, under its heading. */
 export const HEAD = {
-  work: ["Selected work", "Fourteen projects across graphics, embedded hardware, AR, robotics, AI, databases, networks and the web."],
+  work: ["Selected work", "Fifteen projects across graphics, embedded hardware, AR, robotics, AI, databases, networks and the web."],
   about: [
     "Study, lab and contests",
     "I am a final-semester Computer Science and Engineering student at Daffodil International University and President of its AR/VR & Game Development Lab. I write C and C++, build embedded systems on Arduino, ESP32 and STM32, and make AR and VR work in Unity and Blender.",
@@ -299,6 +300,29 @@ export const WORK: WorkItem[] = [
       "Lab setup notes for BIND9 zones, UFW and an OpenSSL root CA and sub-CA for HTTPS",
     ],
     stack: ["Bash", "BIND9", "tcpdump", "UFW", "Linux", "OpenSSL"], repo: REPO.dnsMonitor, links: [], images: shots("dns-client-monitor"),
+  },
+  /* ShadowAstra Atlas. Sources: shadowastra-atlas.vercel.app (home, Team page, footer v1.0) and the team lead's public repo
+   * README (stack, team, SI use: "the narration is the real voice of Mohammed Mahmud Parvez and the music is his own").
+   * His part is film and motion; the app, data pipeline and models are the team's work: describe them as the product,
+   * never as his. This is the 2026 challenge; the Lab's CREDIT (Video Editor, Oct 2023) is dated three years earlier. */
+  {
+    n: "W.15", id: "shadow-astra-atlas", title: "ShadowAstra Atlas", kind: "Web app, NASA Space Apps 2026", year: "2026",
+    status: "Released, v1.0", role: "Film & motion", credit: "Team ShadowAstra, led by Abdullah Rubab",
+    line: "A web app that measures every land area on Earth with NASA data to find places where crews can practise for a Moon base or a Mars mission.",
+    overview: "Team ShadowAstra built it in Dhaka for the 2026 NASA Space Apps Challenge, which asks teams to find places on Earth that stand in for the planned Moon base locations and Mars. It scores 80,206 land areas for the job you pick, such as a rover drive, an ice hunt or a lava tube, and says plainly what Earth can't copy.",
+    build: "I do film and motion for the team: I edit its films, shape its motion language and narrate the demo film, with my own music. The app is a static React 19 and three.js site. A Python pipeline measures every land area with NASA POWER, MODIS, SRTM and EMIT data, and the Moon and Mars with LRO LOLA and MGS MOLA heights. A learned model trained on 38 known test sites ranks them.",
+    highlights: [
+      "Film and motion: edited and narrated the demo film, with original music",
+      "80,206 land areas scored with NASA data and re-ranked live in the browser",
+      "Compare: Earth and Moon or Mars ground side by side at the same scale",
+      "Lessons and a quiz in English, Spanish and Bangla",
+    ],
+    stack: ["React", "three.js", "TypeScript", "Python", "XGBoost", "NASA open data"], repo: REPO.shadowAstra,
+    links: [
+      { label: "Live site", href: "https://shadowastra-atlas.vercel.app/" },
+      { label: "Open dataset", href: "https://huggingface.co/datasets/ABRUBAB/shadowastra-atlas" },
+    ],
+    images: shots("shadow-astra-atlas"),
   },
 ];
 

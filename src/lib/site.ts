@@ -24,7 +24,7 @@ export const SECTIONS = [
 ] as const;
 
 /** Work row ids in order, for the router (rr/scroll.ts) without pulling content.ts into the main chunk. content.ts WORK follows this order. */
-export const WORK_IDS = ["glitched-server", "climate-controller", "smart-life", "ik-arm", "krishinexus", "campus-network", "banking-database", "mind-atlas", "aegis", "ai-vault", "arvr-lab-website", "hotel-management", "voting-machine", "dns-client-monitor"] as const;
+export const WORK_IDS = ["glitched-server", "climate-controller", "smart-life", "ik-arm", "krishinexus", "campus-network", "banking-database", "mind-atlas", "aegis", "ai-vault", "arvr-lab-website", "hotel-management", "voting-machine", "dns-client-monitor", "shadow-astra-atlas"] as const;
 
 export const UI = {
   mode: { render: "Render", raster: "Raster", name: "Raster view" },
