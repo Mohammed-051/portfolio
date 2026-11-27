@@ -338,7 +338,7 @@ export const WORK: WorkItem[] = [
       "Encrypted database: SQLite3MultipleCiphers, key in the Android Keystore",
       "Engine for fixed, routine-anchored and rolling doses, with unit tests",
       "Elder mode with a PIN and recovery code",
-      "Alarm Reliability Doctor for notification, alarm and battery settings",
+      "Alarm Reliability Doctor: permission checks, a test alarm and battery steps",
       "No account, no network for core features, no telemetry",
     ],
     stack: ["Flutter", "Dart", "Riverpod", "Drift", "SQLite3MultipleCiphers", "Android"], links: [], images: shots("medyx"),
