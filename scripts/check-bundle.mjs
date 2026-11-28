@@ -106,8 +106,7 @@ const app = assets
   .sort((a, b) => sizes[b].gz - sizes[a].gz)[0]
 
 for (const f of Object.keys(sizes)) {
-  // (b) bootstrap, (c) app chunk, (d) vendor chunks
-  // (a) index.html, (b) bootstrap, (c) app chunk, (d) vendor chunks
+  // index.html on its own ceiling, then (b) bootstrap, (c) app chunk, (d) vendor chunks
   const budget = f === 'index.html' ? INDEX_HTML_KB : f === boot ? BOOT_KB : f === app ? APP_KB : isVendor(f) ? VENDOR_KB : undefined
   row(f, sizes[f], budget)
 }
