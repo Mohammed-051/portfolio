@@ -10,7 +10,12 @@ import { gzipSync } from 'node:zlib'
 const BOOT_KB = 97488 / 1024 // bootstrap module loaded by index.html
 const APP_KB = 15936 / 1024 // lazy app chunk (largest non-vendor js)
 const VENDOR_KB = 400 // each three* / gsap* / ScrollTrigger* / lenis* chunk, and each Motion-only chunk
-const FAST_PATH_KB = 112806 / 1024 // index.html + its CSS + bootstrap + modulepreloads
+// Fast path, split in two (2026-11-28). It was one 112806 B ceiling for index.html plus its assets, measured when
+// index.html was 4658 B (e292b4f). The code part keeps exactly that allowance: 112806 - 4658 = 108148 B.
+const FAST_PATH_ASSETS_KB = 108148 / 1024 // index.html's CSS + bootstrap + modulepreloads
+// index.html alone. It carries the no-JS fallback built from content.ts, so it grows with every project
+// (about 130 B gz each). The one ceiling that may be raised, and only for new content, never for code.
+const INDEX_HTML_KB = 8192 / 1024
 const PREPAINT_BYTES = 1024 // inline #rr-prepaint script text
 
 const dist = process.argv[2] ?? 'dist'
@@ -102,12 +107,15 @@ const app = assets
 
 for (const f of Object.keys(sizes)) {
   // (b) bootstrap, (c) app chunk, (d) vendor chunks
-  row(f, sizes[f], f === boot ? BOOT_KB : f === app ? APP_KB : isVendor(f) ? VENDOR_KB : undefined)
+  // (a) index.html, (b) bootstrap, (c) app chunk, (d) vendor chunks
+  const budget = f === 'index.html' ? INDEX_HTML_KB : f === boot ? BOOT_KB : f === app ? APP_KB : isVendor(f) ? VENDOR_KB : undefined
+  row(f, sizes[f], budget)
 }
 
-// (e) fast path total
+// (e) fast path: its assets against their ceiling, then the whole path for reference
+const fastAssets = fastPath.filter((f) => f !== 'index.html')
 const total = { raw: 0, gz: 0 }
-for (const f of fastPath) {
+for (const f of fastAssets) {
   if (!sizes[f]) {
     errors.push(`index.html references ${f}, not found in ${dist}`)
     continue
@@ -115,7 +123,8 @@ for (const f of fastPath) {
   total.raw += sizes[f].raw
   total.gz += sizes[f].gz
 }
-row(`fast path (${fastPath.length} files)`, total, FAST_PATH_KB)
+row(`fast path assets (${fastAssets.length} files)`, total, FAST_PATH_ASSETS_KB)
+row(`fast path (${fastPath.length} files)`, { raw: total.raw + sizes['index.html'].raw, gz: total.gz + sizes['index.html'].gz })
 
 console.table(rows)
 // Report: main chunk, Motion vendor chunk(s), and every shipped .js in the total (nothing excluded)

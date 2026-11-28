@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The bundle check now gives `index.html` its own 8 KB gzip ceiling. Its no-JavaScript copy of the project list grows with every project. The CSS and JavaScript on the fast path keep their 1.0.0 allowance of 108148 B.
+
 ## [1.0.0] - 2026-11-25
 
 ### Added
